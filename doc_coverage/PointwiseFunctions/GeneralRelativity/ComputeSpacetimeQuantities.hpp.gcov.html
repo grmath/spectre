@@ -1,0 +1,587 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - cbfbf67b7981e589bee915450d97bc54a82020ab - PointwiseFunctions/GeneralRelativity/ComputeSpacetimeQuantities.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title"> SpECTRE Documentation Coverage Report</td></tr>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../index.html">top level</a> - <a href="index.html">PointwiseFunctions/GeneralRelativity</a> - ComputeSpacetimeQuantities.hpp</td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+             <td class="headerItem">Commit:</td>
+             <td class="headerValue"><a target="_blank" href="https://github.com/sxs-collaboration/spectre/commit/cbfbf67b7981e589bee915450d97bc54a82020ab">cbfbf67b7981e589bee915450d97bc54a82020ab</a></td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">21</td>
+            <td class="headerCovTableEntry">54</td>
+            <td class="headerCovTableEntryLo">38.9 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2020-02-19 21:30:39</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+</td>
+            <td></td>
+          </tr>
+          <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<span class="lineNum">       1 </span><span class="lineCov">          1 : // Distributed under the MIT License.</span>
+<span class="lineNum">       2 </span>            : // See LICENSE.txt for details.
+<span class="lineNum">       3 </span>            : 
+<span class="lineNum">       4 </span>            : ///\file
+<span class="lineNum">       5 </span>            : /// Defines Functions for calculating spacetime tensors from 3+1 quantities
+<span class="lineNum">       6 </span>            : 
+<span class="lineNum">       7 </span>            : #pragma once
+<span class="lineNum">       8 </span>            : 
+<span class="lineNum">       9 </span>            : #include &lt;cmath&gt;
+<span class="lineNum">      10 </span>            : #include &lt;cstddef&gt;
+<span class="lineNum">      11 </span>            : #include &lt;cstdint&gt;
+<span class="lineNum">      12 </span>            : #include &lt;utility&gt;
+<span class="lineNum">      13 </span>            : 
+<span class="lineNum">      14 </span>            : #include &quot;DataStructures/DataBox/DataBoxTag.hpp&quot;
+<span class="lineNum">      15 </span>            : #include &quot;DataStructures/DataBox/Prefixes.hpp&quot;
+<span class="lineNum">      16 </span>            : #include &quot;DataStructures/Tensor/EagerMath/DeterminantAndInverse.hpp&quot;
+<span class="lineNum">      17 </span>            : #include &quot;DataStructures/Tensor/Tensor.hpp&quot;
+<span class="lineNum">      18 </span>            : #include &quot;DataStructures/Variables.hpp&quot;
+<span class="lineNum">      19 </span>            : #include &quot;NumericalAlgorithms/LinearOperators/PartialDerivatives.hpp&quot;
+<span class="lineNum">      20 </span>            : #include &quot;PointwiseFunctions/GeneralRelativity/Tags.hpp&quot;
+<span class="lineNum">      21 </span>            : #include &quot;Utilities/TMPL.hpp&quot;
+<span class="lineNum">      22 </span>            : #include &quot;Utilities/TaggedTuple.hpp&quot;
+<span class="lineNum">      23 </span>            : 
+<span class="lineNum">      24 </span>            : /// \cond
+<span class="lineNum">      25 </span>            : namespace gsl {
+<span class="lineNum">      26 </span>            : template &lt;class T&gt;
+<span class="lineNum">      27 </span>            : class not_null;
+<span class="lineNum">      28 </span>            : }  // namespace gsl
+<span class="lineNum">      29 </span>            : /// \endcond
+<span class="lineNum">      30 </span>            : 
+<span class="lineNum">      31 </span>            : /// \ingroup GeneralRelativityGroup
+<span class="lineNum">      32 </span>            : /// Holds functions related to general relativity.
+<span class="lineNum">      33 </span>            : namespace gr {
+<span class="lineNum">      34 </span>            : // @{
+<span class="lineNum">      35 </span>            : /*!
+<span class="lineNum">      36 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">      37 </span>            :  * \brief Computes the spacetime metric from the spatial metric, lapse, and
+<span class="lineNum">      38 </span>            :  * shift.
+<span class="lineNum">      39 </span>            :  * \details The spacetime metric \f$ \psi_{ab} \f$ is calculated as
+<span class="lineNum">      40 </span>            :  * \f{align}{
+<span class="lineNum">      41 </span>            :  *   \psi_{tt} &amp;= - N^2 + N^m N^n g_{mn} \\
+<span class="lineNum">      42 </span>            :  *   \psi_{ti} &amp;= g_{mi} N^m  \\
+<span class="lineNum">      43 </span>            :  *   \psi_{ij} &amp;= g_{ij}
+<span class="lineNum">      44 </span>            :  * \f}
+<span class="lineNum">      45 </span>            :  * where \f$ N, N^i\f$ and \f$ g_{ij}\f$ are the lapse, shift and spatial metric
+<span class="lineNum">      46 </span>            :  * respectively
+<span class="lineNum">      47 </span>            :  */
+<span class="lineNum">      48 </span>            : template &lt;size_t Dim, typename Frame, typename DataType&gt;
+<span class="lineNum">      49 </span><span class="lineCov">          1 : void spacetime_metric(</span>
+<span class="lineNum">      50 </span>            :     gsl::not_null&lt;tnsr::aa&lt;DataType, Dim, Frame&gt;*&gt; spacetime_metric,
+<span class="lineNum">      51 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse, const tnsr::I&lt;DataType, Dim, Frame&gt;&amp; shift,
+<span class="lineNum">      52 </span>            :     const tnsr::ii&lt;DataType, Dim, Frame&gt;&amp; spatial_metric) noexcept;
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">      55 </span><span class="lineCov">          1 : tnsr::aa&lt;DataType, SpatialDim, Frame&gt; spacetime_metric(</span>
+<span class="lineNum">      56 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse,
+<span class="lineNum">      57 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">      58 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; spatial_metric) noexcept;
+<span class="lineNum">      59 </span>            : // @}
+<span class="lineNum">      60 </span>            : 
+<span class="lineNum">      61 </span>            : // @{
+<span class="lineNum">      62 </span>            : /*!
+<span class="lineNum">      63 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">      64 </span>            :  * \brief Compute spatial metric from spacetime metric.
+<span class="lineNum">      65 </span>            :  * \details Simply pull out the spatial components.
+<span class="lineNum">      66 </span>            :  */
+<span class="lineNum">      67 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">      68 </span>            : tnsr::ii&lt;DataType, SpatialDim, Frame&gt; spatial_metric(
+<span class="lineNum">      69 </span>            :     const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp; spacetime_metric) noexcept;
+<span class="lineNum">      70 </span>            : 
+<span class="lineNum">      71 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">      72 </span><span class="lineCov">          1 : void spatial_metric(</span>
+<span class="lineNum">      73 </span>            :     gsl::not_null&lt;tnsr::ii&lt;DataType, SpatialDim, Frame&gt;*&gt; spatial_metric,
+<span class="lineNum">      74 </span>            :     const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp; spacetime_metric) noexcept;
+<span class="lineNum">      75 </span>            : // @}
+<span class="lineNum">      76 </span>            : 
+<span class="lineNum">      77 </span>            : /*!
+<span class="lineNum">      78 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">      79 </span>            :  * \brief Compute inverse spacetime metric from inverse spatial metric, lapse
+<span class="lineNum">      80 </span>            :  * and shift
+<span class="lineNum">      81 </span>            :  *
+<span class="lineNum">      82 </span>            :  * \details The inverse spacetime metric \f$ \psi^{ab} \f$ is calculated as
+<span class="lineNum">      83 </span>            :  * \f{align}
+<span class="lineNum">      84 </span>            :  *    \psi^{tt} &amp;= -  1/N^2 \\
+<span class="lineNum">      85 </span>            :  *    \psi^{ti} &amp;= N^i / N^2 \\
+<span class="lineNum">      86 </span>            :  *    \psi^{ij} &amp;= g^{ij} - N^i N^j / N^2
+<span class="lineNum">      87 </span>            :  * \f}
+<span class="lineNum">      88 </span>            :  * where \f$ N, N^i\f$ and \f$ g^{ij}\f$ are the lapse, shift and inverse
+<span class="lineNum">      89 </span>            :  * spatial metric respectively
+<span class="lineNum">      90 </span>            :  */
+<span class="lineNum">      91 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">      92 </span><span class="lineCov">          1 : tnsr::AA&lt;DataType, SpatialDim, Frame&gt; inverse_spacetime_metric(</span>
+<span class="lineNum">      93 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse,
+<span class="lineNum">      94 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">      95 </span>            :     const tnsr::II&lt;DataType, SpatialDim, Frame&gt;&amp;
+<span class="lineNum">      96 </span>            :         inverse_spatial_metric) noexcept;
+<span class="lineNum">      97 </span>            : 
+<span class="lineNum">      98 </span>            : // @{
+<span class="lineNum">      99 </span>            : /*!
+<span class="lineNum">     100 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">     101 </span>            :  * \brief Compute shift from spacetime metric and inverse spatial metric.
+<span class="lineNum">     102 </span>            :  *
+<span class="lineNum">     103 </span>            :  * \details Computes
+<span class="lineNum">     104 </span>            :  * \f{align}
+<span class="lineNum">     105 </span>            :  *    N^i &amp;= g^{ij} \psi_{jt}
+<span class="lineNum">     106 </span>            :  * \f}
+<span class="lineNum">     107 </span>            :  * where \f$ N^i\f$, \f$ g^{ij}\f$, and \f$\psi_{ab}\f$ are the shift, inverse
+<span class="lineNum">     108 </span>            :  * spatial metric, and spacetime metric.
+<span class="lineNum">     109 </span>            :  * This can be derived, e.g., from Eqs. 2.121--2.122 of Baumgarte &amp; Shapiro.
+<span class="lineNum">     110 </span>            :  */
+<span class="lineNum">     111 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     112 </span>            : tnsr::I&lt;DataType, SpatialDim, Frame&gt; shift(
+<span class="lineNum">     113 </span>            :     const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp; spacetime_metric,
+<span class="lineNum">     114 </span>            :     const tnsr::II&lt;DataType, SpatialDim, Frame&gt;&amp;
+<span class="lineNum">     115 </span>            :         inverse_spatial_metric) noexcept;
+<span class="lineNum">     116 </span>            : 
+<span class="lineNum">     117 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     118 </span><span class="lineCov">          1 : void shift(gsl::not_null&lt;tnsr::I&lt;DataType, SpatialDim, Frame&gt;*&gt; shift,</span>
+<span class="lineNum">     119 </span>            :            const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp; spacetime_metric,
+<span class="lineNum">     120 </span>            :            const tnsr::II&lt;DataType, SpatialDim, Frame&gt;&amp;
+<span class="lineNum">     121 </span>            :                inverse_spatial_metric) noexcept;
+<span class="lineNum">     122 </span>            : // @}
+<span class="lineNum">     123 </span>            : 
+<span class="lineNum">     124 </span>            : // @{
+<span class="lineNum">     125 </span>            : /*!
+<span class="lineNum">     126 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">     127 </span>            :  * \brief Compute lapse from shift and spacetime metric
+<span class="lineNum">     128 </span>            :  *
+<span class="lineNum">     129 </span>            :  * \details Computes
+<span class="lineNum">     130 </span>            :  * \f{align}
+<span class="lineNum">     131 </span>            :  *    N &amp;= \sqrt{N^i \psi_{it}-\psi_{tt}}
+<span class="lineNum">     132 </span>            :  * \f}
+<span class="lineNum">     133 </span>            :  * where \f$ N \f$, \f$ N^i\f$, and \f$\psi_{ab}\f$ are the lapse, shift,
+<span class="lineNum">     134 </span>            :  * and spacetime metric.
+<span class="lineNum">     135 </span>            :  * This can be derived, e.g., from Eqs. 2.121--2.122 of Baumgarte &amp; Shapiro.
+<span class="lineNum">     136 </span>            :  */
+<span class="lineNum">     137 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     138 </span>            : Scalar&lt;DataType&gt; lapse(
+<span class="lineNum">     139 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">     140 </span>            :     const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp; spacetime_metric) noexcept;
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     143 </span><span class="lineCov">          1 : void lapse(</span>
+<span class="lineNum">     144 </span>            :     gsl::not_null&lt;Scalar&lt;DataType&gt;*&gt; lapse,
+<span class="lineNum">     145 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">     146 </span>            :     const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp; spacetime_metric) noexcept;
+<span class="lineNum">     147 </span>            : // @}
+<span class="lineNum">     148 </span>            : 
+<span class="lineNum">     149 </span>            : // @{
+<span class="lineNum">     150 </span>            : /*!
+<span class="lineNum">     151 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">     152 </span>            :  * \brief Computes the time derivative of the spacetime metric from spatial
+<span class="lineNum">     153 </span>            :  * metric, lapse, shift, and their time derivatives.
+<span class="lineNum">     154 </span>            :  *
+<span class="lineNum">     155 </span>            :  * \details Computes the derivative as:
+<span class="lineNum">     156 </span>            :  *
+<span class="lineNum">     157 </span>            :  * \f{align}{
+<span class="lineNum">     158 </span>            :  * \partial_t g_{tt} &amp;= - 2 \alpha \partial_t \alpha
+<span class="lineNum">     159 </span>            :  * - 2 \gamma_{i j} \beta^i \partial_t \beta^j
+<span class="lineNum">     160 </span>            :  * + \beta^i \beta^j \partial_t \gamma_{i j}\\
+<span class="lineNum">     161 </span>            :  * \partial_t g_{t i} &amp;= \gamma_{j i} \partial_t \beta^j
+<span class="lineNum">     162 </span>            :  * + \beta^j \partial_t \gamma_{j i}\\
+<span class="lineNum">     163 </span>            :  * \partial_t g_{i j} &amp;= \partial_t \gamma_{i j},
+<span class="lineNum">     164 </span>            :  * \f}
+<span class="lineNum">     165 </span>            :  *
+<span class="lineNum">     166 </span>            :  * where \f$\alpha, \beta^i, \gamma_{ij}\f$ are the lapse, shift, and spatial
+<span class="lineNum">     167 </span>            :  * metric respectively.
+<span class="lineNum">     168 </span>            :  */
+<span class="lineNum">     169 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     170 </span><span class="lineCov">          1 : void time_derivative_of_spacetime_metric(</span>
+<span class="lineNum">     171 </span>            :     gsl::not_null&lt;tnsr::aa&lt;DataType, SpatialDim, Frame&gt;*&gt; dt_spacetime_metric,
+<span class="lineNum">     172 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse, const Scalar&lt;DataType&gt;&amp; dt_lapse,
+<span class="lineNum">     173 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">     174 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; dt_shift,
+<span class="lineNum">     175 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; spatial_metric,
+<span class="lineNum">     176 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; dt_spatial_metric) noexcept;
+<span class="lineNum">     177 </span>            : 
+<span class="lineNum">     178 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     179 </span>            : tnsr::aa&lt;DataType, SpatialDim, Frame&gt; time_derivative_of_spacetime_metric(
+<span class="lineNum">     180 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse, const Scalar&lt;DataType&gt;&amp; dt_lapse,
+<span class="lineNum">     181 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">     182 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; dt_shift,
+<span class="lineNum">     183 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; spatial_metric,
+<span class="lineNum">     184 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; dt_spatial_metric) noexcept;
+<span class="lineNum">     185 </span>            : //@}
+<span class="lineNum">     186 </span>            : 
+<span class="lineNum">     187 </span>            : /*!
+<span class="lineNum">     188 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">     189 </span>            :  * \brief Computes spacetime derivative of spacetime metric from spatial metric,
+<span class="lineNum">     190 </span>            :  * lapse, shift, and their space and time derivatives.
+<span class="lineNum">     191 </span>            :  *
+<span class="lineNum">     192 </span>            :  * \details Computes the derivatives as:
+<span class="lineNum">     193 </span>            :  * \f{align}
+<span class="lineNum">     194 </span>            :  *     \partial_\mu \psi_{tt} &amp;= - 2 N \partial_\mu N
+<span class="lineNum">     195 </span>            :  *                 + 2 g_{mn} N^m \partial_\mu N^n
+<span class="lineNum">     196 </span>            :  *                 + N^m N^n \partial_\mu g_{mn} \\
+<span class="lineNum">     197 </span>            :  *     \partial_\mu \psi_{ti} &amp;= g_{mi} \partial_\mu N^m
+<span class="lineNum">     198 </span>            :  *                 + N^m \partial_\mu g_{mi} \\
+<span class="lineNum">     199 </span>            :  *     \partial_\mu \psi_{ij} &amp;= \partial_\mu g_{ij}
+<span class="lineNum">     200 </span>            :  * \f}
+<span class="lineNum">     201 </span>            :  * where \f$ N, N^i, g \f$ are the lapse, shift, and spatial metric
+<span class="lineNum">     202 </span>            :  * respectively.
+<span class="lineNum">     203 </span>            :  */
+<span class="lineNum">     204 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     205 </span><span class="lineCov">          1 : tnsr::abb&lt;DataType, SpatialDim, Frame&gt; derivatives_of_spacetime_metric(</span>
+<span class="lineNum">     206 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse, const Scalar&lt;DataType&gt;&amp; dt_lapse,
+<span class="lineNum">     207 </span>            :     const tnsr::i&lt;DataType, SpatialDim, Frame&gt;&amp; deriv_lapse,
+<span class="lineNum">     208 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">     209 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; dt_shift,
+<span class="lineNum">     210 </span>            :     const tnsr::iJ&lt;DataType, SpatialDim, Frame&gt;&amp; deriv_shift,
+<span class="lineNum">     211 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; spatial_metric,
+<span class="lineNum">     212 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; dt_spatial_metric,
+<span class="lineNum">     213 </span>            :     const tnsr::ijj&lt;DataType, SpatialDim, Frame&gt;&amp;
+<span class="lineNum">     214 </span>            :         deriv_spatial_metric) noexcept;
+<span class="lineNum">     215 </span>            : 
+<span class="lineNum">     216 </span>            : /*!
+<span class="lineNum">     217 </span>            :  * \brief Computes spacetime normal one-form from lapse.
+<span class="lineNum">     218 </span>            :  *
+<span class="lineNum">     219 </span>            :  * \details If \f$N\f$ is the lapse, then
+<span class="lineNum">     220 </span>            :  * \f{align} n_t &amp;= - N \\
+<span class="lineNum">     221 </span>            :  * n_i &amp;= 0 \f}
+<span class="lineNum">     222 </span>            :  * is computed.
+<span class="lineNum">     223 </span>            :  */
+<span class="lineNum">     224 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     225 </span>            : tnsr::a&lt;DataType, SpatialDim, Frame&gt; spacetime_normal_one_form(
+<span class="lineNum">     226 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse) noexcept;
+<span class="lineNum">     227 </span>            : 
+<span class="lineNum">     228 </span>            : // @{
+<span class="lineNum">     229 </span>            : /*!
+<span class="lineNum">     230 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">     231 </span>            :  * \brief  Computes spacetime normal vector from lapse and shift.
+<span class="lineNum">     232 </span>            :  * \details If \f$N, N^i\f$ are the lapse and shift respectively, then
+<span class="lineNum">     233 </span>            :  * \f{align} n^t &amp;= 1/N \\
+<span class="lineNum">     234 </span>            :  * n^i &amp;= -\frac{N^i}{N} \f}
+<span class="lineNum">     235 </span>            :  * is computed.
+<span class="lineNum">     236 </span>            :  */
+<span class="lineNum">     237 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     238 </span>            : tnsr::A&lt;DataType, SpatialDim, Frame&gt; spacetime_normal_vector(
+<span class="lineNum">     239 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse,
+<span class="lineNum">     240 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift) noexcept;
+<span class="lineNum">     241 </span>            : 
+<span class="lineNum">     242 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     243 </span><span class="lineCov">          1 : void spacetime_normal_vector(</span>
+<span class="lineNum">     244 </span>            :     gsl::not_null&lt;tnsr::A&lt;DataType, SpatialDim, Frame&gt;*&gt;
+<span class="lineNum">     245 </span>            :         spacetime_normal_vector,
+<span class="lineNum">     246 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse,
+<span class="lineNum">     247 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift) noexcept;
+<span class="lineNum">     248 </span>            : // @}
+<span class="lineNum">     249 </span>            : 
+<span class="lineNum">     250 </span>            : /*!
+<span class="lineNum">     251 </span>            :  * \ingroup GeneralRelativityGroup
+<span class="lineNum">     252 </span>            :  * \brief  Computes extrinsic curvature from metric and derivatives.
+<span class="lineNum">     253 </span>            :  * \details Uses the ADM evolution equation for the spatial metric,
+<span class="lineNum">     254 </span>            :  * \f[ K_{ij} = \frac{1}{2N} \left ( -\partial_0 g_{ij}
+<span class="lineNum">     255 </span>            :  * + N^k \partial_k g_{ij} + g_{ki} \partial_j N^k
+<span class="lineNum">     256 </span>            :  * + g_{kj} \partial_i N^k \right ) \f]
+<span class="lineNum">     257 </span>            :  * where \f$K_{ij}\f$ is the extrinsic curvature, \f$N\f$ is the lapse,
+<span class="lineNum">     258 </span>            :  * \f$N^i\f$ is the shift, and \f$g_{ij}\f$ is the spatial metric. In terms
+<span class="lineNum">     259 </span>            :  * of the Lie derivative of the spatial metric with respect to a unit timelike
+<span class="lineNum">     260 </span>            :  * vector \f$t^a\f$ normal to the spatial slice, this corresponds to the sign
+<span class="lineNum">     261 </span>            :  * convention
+<span class="lineNum">     262 </span>            :  * \f[ K_{ab} = - \frac{1}{2} \mathcal{L}_{\mathbf{t}} g_{ab} \f]
+<span class="lineNum">     263 </span>            :  */
+<span class="lineNum">     264 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     265 </span>            : tnsr::ii&lt;DataType, SpatialDim, Frame&gt; extrinsic_curvature(
+<span class="lineNum">     266 </span>            :     const Scalar&lt;DataType&gt;&amp; lapse,
+<span class="lineNum">     267 </span>            :     const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp; shift,
+<span class="lineNum">     268 </span>            :     const tnsr::iJ&lt;DataType, SpatialDim, Frame&gt;&amp; deriv_shift,
+<span class="lineNum">     269 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; spatial_metric,
+<span class="lineNum">     270 </span>            :     const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp; dt_spatial_metric,
+<span class="lineNum">     271 </span>            :     const tnsr::ijj&lt;DataType, SpatialDim, Frame&gt;&amp;
+<span class="lineNum">     272 </span>            :         deriv_spatial_metric) noexcept;
+<span class="lineNum">     273 </span>            : 
+<span class="lineNum">     274 </span>            : namespace Tags {
+<span class="lineNum">     275 </span>            : /*!
+<span class="lineNum">     276 </span>            :  * \brief Compute item for spacetime normal oneform \f$n_a\f$ from
+<span class="lineNum">     277 </span>            :  * the lapse \f$N\f$.
+<span class="lineNum">     278 </span>            :  *
+<span class="lineNum">     279 </span>            :  * \details Can be retrieved using `gr::Tags::SpacetimeNormalOneForm`.
+<span class="lineNum">     280 </span>            :  */
+<span class="lineNum">     281 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     282 </span>            : struct SpacetimeNormalOneFormCompute
+<span class="lineNum">     283 </span>            :     : SpacetimeNormalOneForm&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     284 </span><span class="lineCov">          1 :       db::ComputeTag {</span>
+<span class="lineNum">     285 </span><span class="lineNoCov">          0 :   using argument_tags = tmpl::list&lt;Lapse&lt;DataType&gt;&gt;;</span>
+<span class="lineNum">     286 </span><span class="lineNoCov">          0 :   static constexpr auto function =</span>
+<span class="lineNum">     287 </span>            :       &amp;spacetime_normal_one_form&lt;SpatialDim, Frame, DataType&gt;;
+<span class="lineNum">     288 </span><span class="lineNoCov">          0 :   using base = SpacetimeNormalOneForm&lt;SpatialDim, Frame, DataType&gt;;</span>
+<span class="lineNum">     289 </span>            : };
+<span class="lineNum">     290 </span>            : 
+<span class="lineNum">     291 </span>            : /*!
+<span class="lineNum">     292 </span>            :  * \brief Compute item for spacetime normal vector \f$n^a\f$ from
+<span class="lineNum">     293 </span>            :  * the lapse \f$N\f$ and the shift \f$N^i\f$.
+<span class="lineNum">     294 </span>            :  *
+<span class="lineNum">     295 </span>            :  * \details Can be retrieved using `gr::Tags::SpacetimeNormalVector`.
+<span class="lineNum">     296 </span>            :  */
+<span class="lineNum">     297 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     298 </span>            : struct SpacetimeNormalVectorCompute
+<span class="lineNum">     299 </span>            :     : SpacetimeNormalVector&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     300 </span><span class="lineCov">          1 :       db::ComputeTag {</span>
+<span class="lineNum">     301 </span><span class="lineNoCov">          0 :   using argument_tags =</span>
+<span class="lineNum">     302 </span>            :       tmpl::list&lt;Lapse&lt;DataType&gt;, Shift&lt;SpatialDim, Frame, DataType&gt;&gt;;
+<span class="lineNum">     303 </span><span class="lineNoCov">          0 :   static constexpr auto function =</span>
+<span class="lineNum">     304 </span>            :       static_cast&lt;tnsr::A&lt;DataType, SpatialDim, Frame&gt; (*)(
+<span class="lineNum">     305 </span>            :           const Scalar&lt;DataType&gt;&amp;,
+<span class="lineNum">     306 </span>            :           const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp;)&gt;(
+<span class="lineNum">     307 </span>            :           &amp;spacetime_normal_vector&lt;SpatialDim, Frame, DataType&gt;);
+<span class="lineNum">     308 </span><span class="lineNoCov">          0 :   using base = SpacetimeNormalVector&lt;SpatialDim, Frame, DataType&gt;;</span>
+<span class="lineNum">     309 </span>            : };
+<span class="lineNum">     310 </span>            : 
+<span class="lineNum">     311 </span>            : /*!
+<span class="lineNum">     312 </span>            :  * \brief Compute item for spacetime metric \f$\psi_{ab}\f$ from the
+<span class="lineNum">     313 </span>            :  * lapse \f$N\f$, shift \f$N^i\f$, and spatial metric \f$g_{ij}\f$.
+<span class="lineNum">     314 </span>            :  *
+<span class="lineNum">     315 </span>            :  * \details Can be retrieved using `gr::Tags::SpacetimeMetric`.
+<span class="lineNum">     316 </span>            :  */
+<span class="lineNum">     317 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     318 </span>            : struct SpacetimeMetricCompute : SpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     319 </span><span class="lineCov">          1 :                                 db::ComputeTag {</span>
+<span class="lineNum">     320 </span><span class="lineNoCov">          0 :   using argument_tags =</span>
+<span class="lineNum">     321 </span>            :       tmpl::list&lt;Lapse&lt;DataType&gt;, Shift&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     322 </span>            :                  SpatialMetric&lt;SpatialDim, Frame, DataType&gt;&gt;;
+<span class="lineNum">     323 </span><span class="lineNoCov">          0 :   using base = SpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;;</span>
+<span class="lineNum">     324 </span><span class="lineNoCov">          0 :   static constexpr tnsr::aa&lt;DataType, SpatialDim, Frame&gt; (*function)(</span>
+<span class="lineNum">     325 </span>            :       const Scalar&lt;DataType&gt;&amp;, const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp;,
+<span class="lineNum">     326 </span>            :       const tnsr::ii&lt;DataType, SpatialDim, Frame&gt;&amp;) =
+<span class="lineNum">     327 </span>            :       &amp;spacetime_metric&lt;SpatialDim, Frame, DataType&gt;;
+<span class="lineNum">     328 </span>            : };
+<span class="lineNum">     329 </span>            : 
+<span class="lineNum">     330 </span>            : /*!
+<span class="lineNum">     331 </span>            :  * \brief Compute item for inverse spacetime metric \f$\psi^{ab}\f$
+<span class="lineNum">     332 </span>            :  * in terms of the lapse \f$N\f$, shift \f$N^i\f$, and inverse
+<span class="lineNum">     333 </span>            :  * spatial metric \f$g^{ij}\f$.
+<span class="lineNum">     334 </span>            :  *
+<span class="lineNum">     335 </span>            :  * \details Can be retrieved using `gr::Tags::InverseSpacetimeMetric`.
+<span class="lineNum">     336 </span>            :  */
+<span class="lineNum">     337 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     338 </span>            : struct InverseSpacetimeMetricCompute
+<span class="lineNum">     339 </span>            :     : InverseSpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     340 </span><span class="lineCov">          1 :       db::ComputeTag {</span>
+<span class="lineNum">     341 </span><span class="lineNoCov">          0 :   using argument_tags =</span>
+<span class="lineNum">     342 </span>            :       tmpl::list&lt;Lapse&lt;DataType&gt;, Shift&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     343 </span>            :                  InverseSpatialMetric&lt;SpatialDim, Frame, DataType&gt;&gt;;
+<span class="lineNum">     344 </span><span class="lineNoCov">          0 :   static constexpr auto function =</span>
+<span class="lineNum">     345 </span>            :       &amp;inverse_spacetime_metric&lt;SpatialDim, Frame, DataType&gt;;
+<span class="lineNum">     346 </span><span class="lineNoCov">          0 :   using base = InverseSpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;;</span>
+<span class="lineNum">     347 </span>            : };
+<span class="lineNum">     348 </span>            : 
+<span class="lineNum">     349 </span>            : /*!
+<span class="lineNum">     350 </span>            :  * \brief Compute item for spatial metric \f$g_{ij}\f$ from the
+<span class="lineNum">     351 </span>            :  * spacetime metric \f$\psi_{ab}\f$.
+<span class="lineNum">     352 </span>            :  *
+<span class="lineNum">     353 </span>            :  * \details Can be retrieved using `gr::Tags::SpatialMetric`.
+<span class="lineNum">     354 </span>            :  */
+<span class="lineNum">     355 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     356 </span>            : struct SpatialMetricCompute : SpatialMetric&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     357 </span><span class="lineCov">          1 :                               db::ComputeTag {</span>
+<span class="lineNum">     358 </span><span class="lineNoCov">          0 :   using argument_tags =</span>
+<span class="lineNum">     359 </span>            :       tmpl::list&lt;SpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;&gt;;
+<span class="lineNum">     360 </span><span class="lineNoCov">          0 :   static constexpr auto function =</span>
+<span class="lineNum">     361 </span>            :       static_cast&lt;tnsr::ii&lt;DataType, SpatialDim, Frame&gt; (*)(
+<span class="lineNum">     362 </span>            :           const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp;)&gt;(
+<span class="lineNum">     363 </span>            :           &amp;spatial_metric&lt;SpatialDim, Frame, DataType&gt;);
+<span class="lineNum">     364 </span><span class="lineNoCov">          0 :   using base = SpatialMetric&lt;SpatialDim, Frame, DataType&gt;;</span>
+<span class="lineNum">     365 </span>            : };
+<span class="lineNum">     366 </span>            : 
+<span class="lineNum">     367 </span>            : /*!
+<span class="lineNum">     368 </span>            :  * \brief Compute item for spatial metric determinant \f$g\f$
+<span class="lineNum">     369 </span>            :  * and inverse \f$g^{ij}\f$ in terms of the spatial metric \f$g_{ij}\f$.
+<span class="lineNum">     370 </span>            :  *
+<span class="lineNum">     371 </span>            :  * \details Can be retrieved using `gr::Tags::DetSpatialMetric` and
+<span class="lineNum">     372 </span>            :  * `gr::Tags::InverseSpatialMetric`.
+<span class="lineNum">     373 </span>            :  */
+<span class="lineNum">     374 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     375 </span>            : struct DetAndInverseSpatialMetricCompute
+<span class="lineNum">     376 </span>            :     : ::Tags::Variables&lt;
+<span class="lineNum">     377 </span>            :           tmpl::list&lt;DetSpatialMetric&lt;DataType&gt;,
+<span class="lineNum">     378 </span>            :                      InverseSpatialMetric&lt;SpatialDim, Frame, DataType&gt;&gt;&gt;,
+<span class="lineNum">     379 </span><span class="lineCov">          1 :       db::ComputeTag {</span>
+<span class="lineNum">     380 </span><span class="lineNoCov">          0 :   using argument_tags = tmpl::list&lt;SpatialMetric&lt;SpatialDim, Frame, DataType&gt;&gt;;</span>
+<span class="lineNum">     381 </span><span class="lineNoCov">          0 :   using base = ::Tags::Variables&lt;</span>
+<span class="lineNum">     382 </span>            :       tmpl::list&lt;DetSpatialMetric&lt;DataType&gt;,
+<span class="lineNum">     383 </span>            :                  InverseSpatialMetric&lt;SpatialDim, Frame, DataType&gt;&gt;&gt;;
+<span class="lineNum">     384 </span><span class="lineNoCov">          0 :   static constexpr auto function = &amp;determinant_and_inverse&lt;</span>
+<span class="lineNum">     385 </span>            :       DetSpatialMetric&lt;DataType&gt;,
+<span class="lineNum">     386 </span>            :       InverseSpatialMetric&lt;SpatialDim, Frame, DataType&gt;, DataType,
+<span class="lineNum">     387 </span>            :       tmpl::integral_list&lt;std::int32_t, 1, 1&gt;,
+<span class="lineNum">     388 </span>            :       SpatialIndex&lt;SpatialDim, UpLo::Lo, Frame&gt;,
+<span class="lineNum">     389 </span>            :       SpatialIndex&lt;SpatialDim, UpLo::Lo, Frame&gt;&gt;;
+<span class="lineNum">     390 </span>            : };
+<span class="lineNum">     391 </span>            : 
+<span class="lineNum">     392 </span>            : /*!
+<span class="lineNum">     393 </span>            :  * \brief Compute item to get spacetime derivative of spacetime metric from
+<span class="lineNum">     394 </span>            :  * spatial metric, lapse, shift, and their space and time derivatives.
+<span class="lineNum">     395 </span>            :  *
+<span class="lineNum">     396 </span>            :  * \details See `derivatives_of_spacetime_metric()`. Can be retrieved using
+<span class="lineNum">     397 </span>            :  * `gr::Tags::DerivativesOfSpacetimeMetric`.
+<span class="lineNum">     398 </span>            :  */
+<span class="lineNum">     399 </span>            : template &lt;size_t SpatialDim, typename Frame&gt;
+<span class="lineNum">     400 </span>            : struct DerivativesOfSpacetimeMetricCompute
+<span class="lineNum">     401 </span>            :     : gr::Tags::DerivativesOfSpacetimeMetric&lt;SpatialDim, Frame, DataVector&gt;,
+<span class="lineNum">     402 </span><span class="lineCov">          1 :       db::ComputeTag {</span>
+<span class="lineNum">     403 </span><span class="lineNoCov">          0 :   using argument_tags = tmpl::list&lt;</span>
+<span class="lineNum">     404 </span>            :       gr::Tags::Lapse&lt;DataVector&gt;, ::Tags::dt&lt;gr::Tags::Lapse&lt;DataVector&gt;&gt;,
+<span class="lineNum">     405 </span>            :       ::Tags::deriv&lt;gr::Tags::Lapse&lt;DataVector&gt;, tmpl::size_t&lt;SpatialDim&gt;,
+<span class="lineNum">     406 </span>            :                     Frame&gt;,
+<span class="lineNum">     407 </span>            :       gr::Tags::Shift&lt;SpatialDim, Frame, DataVector&gt;,
+<span class="lineNum">     408 </span>            :       ::Tags::dt&lt;gr::Tags::Shift&lt;SpatialDim, Frame, DataVector&gt;&gt;,
+<span class="lineNum">     409 </span>            :       ::Tags::deriv&lt;gr::Tags::Shift&lt;SpatialDim, Frame, DataVector&gt;,
+<span class="lineNum">     410 </span>            :                     tmpl::size_t&lt;SpatialDim&gt;, Frame&gt;,
+<span class="lineNum">     411 </span>            :       gr::Tags::SpatialMetric&lt;SpatialDim, Frame, DataVector&gt;,
+<span class="lineNum">     412 </span>            :       ::Tags::dt&lt;gr::Tags::SpatialMetric&lt;SpatialDim, Frame, DataVector&gt;&gt;,
+<span class="lineNum">     413 </span>            :       ::Tags::deriv&lt;gr::Tags::SpatialMetric&lt;SpatialDim, Frame, DataVector&gt;,
+<span class="lineNum">     414 </span>            :                     tmpl::size_t&lt;SpatialDim&gt;, Frame&gt;&gt;;
+<span class="lineNum">     415 </span><span class="lineNoCov">          0 :   static constexpr auto function =</span>
+<span class="lineNum">     416 </span>            :       &amp;gr::derivatives_of_spacetime_metric&lt;SpatialDim, Frame, DataVector&gt;;
+<span class="lineNum">     417 </span><span class="lineNoCov">          0 :   using base =</span>
+<span class="lineNum">     418 </span>            :       gr::Tags::DerivativesOfSpacetimeMetric&lt;SpatialDim, Frame, DataVector&gt;;
+<span class="lineNum">     419 </span>            : };
+<span class="lineNum">     420 </span>            : 
+<span class="lineNum">     421 </span>            : /*!
+<span class="lineNum">     422 </span>            :  * \brief Compute item to get spatial derivative of spacetime metric from
+<span class="lineNum">     423 </span>            :  * spatial metric, lapse, shift, and their space and time derivatives.
+<span class="lineNum">     424 </span>            :  *
+<span class="lineNum">     425 </span>            :  * \details Extracts spatial derivatives from spacetime derivatives computed
+<span class="lineNum">     426 </span>            :  * with `derivatives_of_spacetime_metric()`. Can be retrieved using
+<span class="lineNum">     427 </span>            :  * `gr::Tags::SpacetimeMetric` wrapped in `Tags::deriv`.
+<span class="lineNum">     428 </span>            :  */
+<span class="lineNum">     429 </span>            : template &lt;size_t SpatialDim, typename Frame&gt;
+<span class="lineNum">     430 </span>            : struct DerivSpacetimeMetricCompute
+<span class="lineNum">     431 </span>            :     : gr::Tags::DerivSpacetimeMetric&lt;SpatialDim, Frame, DataVector&gt;,
+<span class="lineNum">     432 </span><span class="lineCov">          1 :       db::ComputeTag {</span>
+<span class="lineNum">     433 </span><span class="lineNoCov">          0 :   using argument_tags = tmpl::list&lt;</span>
+<span class="lineNum">     434 </span>            :       gr::Tags::DerivativesOfSpacetimeMetric&lt;SpatialDim, Frame, DataVector&gt;&gt;;
+<span class="lineNum">     435 </span><span class="lineNoCov">          0 :   static constexpr auto function(</span>
+<span class="lineNum">     436 </span>            :       const tnsr::abb&lt;DataVector, SpatialDim, Frame&gt;&amp;
+<span class="lineNum">     437 </span>            :           spacetime_deriv_of_spacetime_metric) noexcept {
+<span class="lineNum">     438 </span>            :     auto deriv_spacetime_metric =
+<span class="lineNum">     439 </span>            :         make_with_value&lt;tnsr::iaa&lt;DataVector, SpatialDim, Frame&gt;&gt;(
+<span class="lineNum">     440 </span>            :             spacetime_deriv_of_spacetime_metric, 0.);
+<span class="lineNum">     441 </span>            :     for (size_t i = 0; i &lt; SpatialDim; ++i) {
+<span class="lineNum">     442 </span>            :       for (size_t a = 0; a &lt; SpatialDim + 1; ++a) {
+<span class="lineNum">     443 </span>            :         for (size_t b = a; b &lt; SpatialDim + 1; ++b) {
+<span class="lineNum">     444 </span>            :           deriv_spacetime_metric.get(i, a, b) =
+<span class="lineNum">     445 </span>            :               spacetime_deriv_of_spacetime_metric.get(i + 1, a, b);
+<span class="lineNum">     446 </span>            :         }
+<span class="lineNum">     447 </span>            :       }
+<span class="lineNum">     448 </span>            :     }
+<span class="lineNum">     449 </span>            :     return deriv_spacetime_metric;
+<span class="lineNum">     450 </span>            :   }
+<span class="lineNum">     451 </span><span class="lineNoCov">          0 :   using base = gr::Tags::DerivSpacetimeMetric&lt;SpatialDim, Frame, DataVector&gt;;</span>
+<span class="lineNum">     452 </span>            : };
+<span class="lineNum">     453 </span>            : 
+<span class="lineNum">     454 </span>            : /*!
+<span class="lineNum">     455 </span>            :  * \brief Compute item to get the square root of the determinant of the spatial
+<span class="lineNum">     456 </span>            :  * metric \f$\sqrt{g}\f$ via `gr::Tags::DetAndInverseSpatialMetric`.
+<span class="lineNum">     457 </span>            :  *
+<span class="lineNum">     458 </span>            :  * \details Can be retrieved using `gr::Tags::SqrtDetSpatialMetric`.
+<span class="lineNum">     459 </span>            :  */
+<span class="lineNum">     460 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     461 </span>            : struct SqrtDetSpatialMetricCompute : SqrtDetSpatialMetric&lt;DataType&gt;,
+<span class="lineNum">     462 </span><span class="lineCov">          1 :                                      db::ComputeTag {</span>
+<span class="lineNum">     463 </span><span class="lineNoCov">          0 :   using argument_tags = tmpl::list&lt;DetSpatialMetric&lt;DataType&gt;&gt;;</span>
+<span class="lineNum">     464 </span><span class="lineNoCov">          0 :   static Scalar&lt;DataType&gt; function(const Scalar&lt;DataType&gt;&amp; det_spatial_metric) {</span>
+<span class="lineNum">     465 </span>            :     return Scalar&lt;DataType&gt;{sqrt(get(det_spatial_metric))};
+<span class="lineNum">     466 </span>            :   }
+<span class="lineNum">     467 </span><span class="lineNoCov">          0 :   using base = SqrtDetSpatialMetric&lt;DataType&gt;;</span>
+<span class="lineNum">     468 </span>            : };
+<span class="lineNum">     469 </span>            : 
+<span class="lineNum">     470 </span>            : /*!
+<span class="lineNum">     471 </span>            :  * \brief Compute item for shift \f$N^i\f$ from the spacetime metric
+<span class="lineNum">     472 </span>            :  * \f$\psi_{ab}\f$ and the inverse spatial metric \f$g^{ij}\f$.
+<span class="lineNum">     473 </span>            :  *
+<span class="lineNum">     474 </span>            :  * \details Can be retrieved using `gr::Tags::Shift`.
+<span class="lineNum">     475 </span>            :  */
+<span class="lineNum">     476 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     477 </span><span class="lineCov">          1 : struct ShiftCompute : Shift&lt;SpatialDim, Frame, DataType&gt;, db::ComputeTag {</span>
+<span class="lineNum">     478 </span><span class="lineNoCov">          0 :   using argument_tags =</span>
+<span class="lineNum">     479 </span>            :       tmpl::list&lt;SpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     480 </span>            :                  InverseSpatialMetric&lt;SpatialDim, Frame, DataType&gt;&gt;;
+<span class="lineNum">     481 </span><span class="lineNoCov">          0 :   static constexpr auto function =</span>
+<span class="lineNum">     482 </span>            :       static_cast&lt;tnsr::I&lt;DataType, SpatialDim, Frame&gt; (*)(
+<span class="lineNum">     483 </span>            :           const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp;,
+<span class="lineNum">     484 </span>            :           const tnsr::II&lt;DataType, SpatialDim, Frame&gt;&amp;)&gt;(
+<span class="lineNum">     485 </span>            :           &amp;shift&lt;SpatialDim, Frame, DataType&gt;);
+<span class="lineNum">     486 </span><span class="lineNoCov">          0 :   using base = Shift&lt;SpatialDim, Frame, DataType&gt;;</span>
+<span class="lineNum">     487 </span>            : };
+<span class="lineNum">     488 </span>            : 
+<span class="lineNum">     489 </span>            : /*!
+<span class="lineNum">     490 </span>            :  * \brief Compute item for lapse \f$N\f$ from the spacetime metric
+<span class="lineNum">     491 </span>            :  * \f$\psi_{ab}\f$ and the shift \f$N^i\f$.
+<span class="lineNum">     492 </span>            :  *
+<span class="lineNum">     493 </span>            :  * \details Can be retrieved using `gr::Tags::Lapse`.
+<span class="lineNum">     494 </span>            :  */
+<span class="lineNum">     495 </span>            : template &lt;size_t SpatialDim, typename Frame, typename DataType&gt;
+<span class="lineNum">     496 </span><span class="lineCov">          1 : struct LapseCompute : Lapse&lt;DataType&gt;, db::ComputeTag {</span>
+<span class="lineNum">     497 </span><span class="lineNoCov">          0 :   using argument_tags =</span>
+<span class="lineNum">     498 </span>            :       tmpl::list&lt;Shift&lt;SpatialDim, Frame, DataType&gt;,
+<span class="lineNum">     499 </span>            :                  SpacetimeMetric&lt;SpatialDim, Frame, DataType&gt;&gt;;
+<span class="lineNum">     500 </span><span class="lineNoCov">          0 :   static constexpr auto function = static_cast&lt;Scalar&lt;DataType&gt; (*)(</span>
+<span class="lineNum">     501 </span>            :       const tnsr::I&lt;DataType, SpatialDim, Frame&gt;&amp;,
+<span class="lineNum">     502 </span>            :       const tnsr::aa&lt;DataType, SpatialDim, Frame&gt;&amp;)&gt;(
+<span class="lineNum">     503 </span>            :       &amp;lapse&lt;SpatialDim, Frame, DataType&gt;);
+<span class="lineNum">     504 </span><span class="lineNoCov">          0 :   using base = Lapse&lt;DataType&gt;;</span>
+<span class="lineNum">     505 </span>            : };
+<span class="lineNum">     506 </span>            : }  // namespace Tags
+<span class="lineNum">     507 </span>            : }  // namespace gr
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

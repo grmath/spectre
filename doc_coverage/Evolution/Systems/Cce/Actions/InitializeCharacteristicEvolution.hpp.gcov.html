@@ -1,0 +1,342 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - cbfbf67b7981e589bee915450d97bc54a82020ab - Evolution/Systems/Cce/Actions/InitializeCharacteristicEvolution.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title"> SpECTRE Documentation Coverage Report</td></tr>
+    <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../../index.html">top level</a> - <a href="index.html">Evolution/Systems/Cce/Actions</a> - InitializeCharacteristicEvolution.hpp</td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+             <td class="headerItem">Commit:</td>
+             <td class="headerValue"><a target="_blank" href="https://github.com/sxs-collaboration/spectre/commit/cbfbf67b7981e589bee915450d97bc54a82020ab">cbfbf67b7981e589bee915450d97bc54a82020ab</a></td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">26</td>
+            <td class="headerCovTableEntryLo">3.8 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2020-02-19 21:30:39</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+</td>
+            <td></td>
+          </tr>
+          <tr><td><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<span class="lineNum">       1 </span><span class="lineNoCov">          0 : // Distributed under the MIT License.</span>
+<span class="lineNum">       2 </span>            : // See LICENSE.txt for details.
+<span class="lineNum">       3 </span>            : 
+<span class="lineNum">       4 </span>            : #pragma once
+<span class="lineNum">       5 </span>            : 
+<span class="lineNum">       6 </span>            : #include &lt;cstddef&gt;
+<span class="lineNum">       7 </span>            : #include &lt;limits&gt;
+<span class="lineNum">       8 </span>            : #include &lt;tuple&gt;
+<span class="lineNum">       9 </span>            : #include &lt;utility&gt;
+<span class="lineNum">      10 </span>            : 
+<span class="lineNum">      11 </span>            : #include &quot;DataStructures/DataBox/DataBox.hpp&quot;
+<span class="lineNum">      12 </span>            : #include &quot;DataStructures/DataBox/DataBoxTag.hpp&quot;
+<span class="lineNum">      13 </span>            : #include &quot;DataStructures/DataBox/Prefixes.hpp&quot;
+<span class="lineNum">      14 </span>            : #include &quot;Evolution/Systems/Cce/InitializeCce.hpp&quot;
+<span class="lineNum">      15 </span>            : #include &quot;Evolution/Systems/Cce/OptionTags.hpp&quot;
+<span class="lineNum">      16 </span>            : #include &quot;Evolution/Systems/Cce/Tags.hpp&quot;
+<span class="lineNum">      17 </span>            : #include &quot;NumericalAlgorithms/Spectral/SwshInterpolation.hpp&quot;
+<span class="lineNum">      18 </span>            : #include &quot;Parallel/Info.hpp&quot;
+<span class="lineNum">      19 </span>            : #include &quot;ParallelAlgorithms/Initialization/MergeIntoDataBox.hpp&quot;
+<span class="lineNum">      20 </span>            : #include &quot;Time/Tags.hpp&quot;
+<span class="lineNum">      21 </span>            : #include &quot;Time/TimeSteppers/TimeStepper.hpp&quot;
+<span class="lineNum">      22 </span>            : #include &quot;Utilities/Gsl.hpp&quot;
+<span class="lineNum">      23 </span>            : #include &quot;Utilities/NoSuchType.hpp&quot;
+<span class="lineNum">      24 </span>            : #include &quot;Utilities/Rational.hpp&quot;
+<span class="lineNum">      25 </span>            : #include &quot;Utilities/Requires.hpp&quot;
+<span class="lineNum">      26 </span>            : #include &quot;Utilities/TMPL.hpp&quot;
+<span class="lineNum">      27 </span>            : #include &quot;Utilities/TaggedTuple.hpp&quot;
+<span class="lineNum">      28 </span>            : 
+<span class="lineNum">      29 </span>            : namespace Cce {
+<span class="lineNum">      30 </span>            : /// \brief The set of actions for use in the CCE evolution system
+<span class="lineNum">      31 </span>            : namespace Actions {
+<span class="lineNum">      32 </span>            : 
+<span class="lineNum">      33 </span>            : /*!
+<span class="lineNum">      34 </span>            :  * \ingroup ActionsGroup
+<span class="lineNum">      35 </span>            :  * \brief Initializes the `CharacteristicEvolution` component, which is the
+<span class="lineNum">      36 </span>            :  * singleton that handles the main evolution system for CCE computations.
+<span class="lineNum">      37 </span>            :  *
+<span class="lineNum">      38 </span>            :  * \details Sets up the \ref DataBoxGroup to be ready to take data from the
+<span class="lineNum">      39 </span>            :  * worldtube component and calculate initial data.
+<span class="lineNum">      40 </span>            :  *
+<span class="lineNum">      41 </span>            :  * \ref DataBoxGroup changes:
+<span class="lineNum">      42 </span>            :  * - Modifies: nothing
+<span class="lineNum">      43 </span>            :  * - Adds:
+<span class="lineNum">      44 </span>            :  *  - `Cce::Tags::BoundaryTime`
+<span class="lineNum">      45 </span>            :  *  - `Tags::TimeStepId`
+<span class="lineNum">      46 </span>            :  *  - `Tags::Next&lt;Tags::TimeStepId&gt;`
+<span class="lineNum">      47 </span>            :  *  - `Tags::TimeStep`
+<span class="lineNum">      48 </span>            :  *  -
+<span class="lineNum">      49 </span>            :  * ```
+<span class="lineNum">      50 </span>            :  * Tags::HistoryEvolvedVariables&lt;
+<span class="lineNum">      51 </span>            :  * metavariables::evolved_coordinates_variables_tag,
+<span class="lineNum">      52 </span>            :  * db::add_tag_prefix&lt;Tags::dt,
+<span class="lineNum">      53 </span>            :  * metavariables::evolved_coordinates_variables_tag&gt;&gt;
+<span class="lineNum">      54 </span>            :  * ```
+<span class="lineNum">      55 </span>            :  *  -
+<span class="lineNum">      56 </span>            :  * ```
+<span class="lineNum">      57 </span>            :  * Tags::HistoryEvolvedVariables&lt;
+<span class="lineNum">      58 </span>            :  *::Tags::Variables&lt;metavariables::evolved_swsh_tag&gt;,
+<span class="lineNum">      59 </span>            :  * ::Tags::Variables&lt;metavariables::evolved_swsh_dt_tag&gt;&gt;
+<span class="lineNum">      60 </span>            :  * ```
+<span class="lineNum">      61 </span>            :  *  - `metavariables::evolved_coordinates_variables_tag`
+<span class="lineNum">      62 </span>            :  *  -
+<span class="lineNum">      63 </span>            :  * ```
+<span class="lineNum">      64 </span>            :  * db::add_tag_prefix&lt;Tags::dt,
+<span class="lineNum">      65 </span>            :  * metavariables::evolved_coordinates_variables_tag&gt;
+<span class="lineNum">      66 </span>            :  * ```
+<span class="lineNum">      67 </span>            :  *  - `Tags::Variables&lt;metavariables::cce_angular_coordinate_tags&gt;`
+<span class="lineNum">      68 </span>            :  *  - `Tags::Variables&lt;metavariables::cce_scri_tags&gt;`
+<span class="lineNum">      69 </span>            :  *  -
+<span class="lineNum">      70 </span>            :  * ```
+<span class="lineNum">      71 </span>            :  * Tags::Variables&lt;tmpl::append&lt;
+<span class="lineNum">      72 </span>            :  * metavariables::cce_integrand_tags,
+<span class="lineNum">      73 </span>            :  * metavariables::cce_integration_independent_tags,
+<span class="lineNum">      74 </span>            :  * metavariables::cce_temporary_equations_tags&gt;&gt;
+<span class="lineNum">      75 </span>            :  * ```
+<span class="lineNum">      76 </span>            :  *  - `Tags::Variables&lt;metavariables::cce_pre_swsh_derivatives_tags&gt;`
+<span class="lineNum">      77 </span>            :  *  - `Tags::Variables&lt;metavariables::cce_transform_buffer_tags&gt;`
+<span class="lineNum">      78 </span>            :  *  - `Tags::Variables&lt;metavariables::cce_swsh_derivative_tags&gt;`
+<span class="lineNum">      79 </span>            :  *  - `Spectral::Swsh::Tags::NumberOfRadialPoints`
+<span class="lineNum">      80 </span>            :  *  - `Tags::EndTime`
+<span class="lineNum">      81 </span>            :  *  - `Spectral::Swsh::Tags::SwshInterpolator&lt;Tags::CauchyAngularCoords&gt;`
+<span class="lineNum">      82 </span>            :  * - Removes: nothing
+<span class="lineNum">      83 </span>            :  */
+<span class="lineNum">      84 </span><span class="lineCov">          1 : struct InitializeCharacteristicEvolution {</span>
+<span class="lineNum">      85 </span><span class="lineNoCov">          0 :   using initialization_tags =</span>
+<span class="lineNum">      86 </span>            :       tmpl::list&lt;InitializationTags::StartTime, InitializationTags::EndTime,
+<span class="lineNum">      87 </span>            :                  InitializationTags::TargetStepSize&gt;;
+<span class="lineNum">      88 </span><span class="lineNoCov">          0 :   using const_global_cache_tags =</span>
+<span class="lineNum">      89 </span>            :       tmpl::list&lt;::Tags::TimeStepper&lt;TimeStepper&gt;, Spectral::Swsh::Tags::LMax,
+<span class="lineNum">      90 </span>            :                  Spectral::Swsh::Tags::NumberOfRadialPoints&gt;;
+<span class="lineNum">      91 </span>            : 
+<span class="lineNum">      92 </span>            :   template &lt;typename Metavariables&gt;
+<span class="lineNum">      93 </span><span class="lineNoCov">          0 :   struct EvolutionTags {</span>
+<span class="lineNum">      94 </span><span class="lineNoCov">          0 :     using coordinate_variables_tag =</span>
+<span class="lineNum">      95 </span>            :         typename Metavariables::evolved_coordinates_variables_tag;
+<span class="lineNum">      96 </span><span class="lineNoCov">          0 :     using dt_coordinate_variables_tag =</span>
+<span class="lineNum">      97 </span>            :         db::add_tag_prefix&lt;::Tags::dt, coordinate_variables_tag&gt;;
+<span class="lineNum">      98 </span><span class="lineNoCov">          0 :     using evolution_simple_tags = db::AddSimpleTags&lt;</span>
+<span class="lineNum">      99 </span>            :         ::Tags::TimeStepId, ::Tags::Next&lt;::Tags::TimeStepId&gt;, ::Tags::TimeStep,
+<span class="lineNum">     100 </span>            :         ::Tags::HistoryEvolvedVariables&lt;coordinate_variables_tag&gt;,
+<span class="lineNum">     101 </span>            :         ::Tags::HistoryEvolvedVariables&lt;
+<span class="lineNum">     102 </span>            :             ::Tags::Variables&lt;
+<span class="lineNum">     103 </span>            :                 tmpl::list&lt;typename Metavariables::evolved_swsh_tag&gt;&gt;&gt;&gt;;
+<span class="lineNum">     104 </span><span class="lineNoCov">          0 :     using evolution_compute_tags =</span>
+<span class="lineNum">     105 </span>            :         db::AddComputeTags&lt;::Tags::SubstepTimeCompute&gt;;
+<span class="lineNum">     106 </span>            : 
+<span class="lineNum">     107 </span>            :     template &lt;typename TagList&gt;
+<span class="lineNum">     108 </span><span class="lineNoCov">          0 :     static auto initialize(</span>
+<span class="lineNum">     109 </span>            :         db::DataBox&lt;TagList&gt;&amp;&amp; box,
+<span class="lineNum">     110 </span>            :         const Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; /*cache*/) noexcept {
+<span class="lineNum">     111 </span>            :       const double initial_time_value =
+<span class="lineNum">     112 </span>            :           db::get&lt;InitializationTags::StartTime&gt;(box);
+<span class="lineNum">     113 </span>            :       const double step_size = db::get&lt;InitializationTags::TargetStepSize&gt;(box);
+<span class="lineNum">     114 </span>            : 
+<span class="lineNum">     115 </span>            :       const Slab single_step_slab{initial_time_value,
+<span class="lineNum">     116 </span>            :                                   initial_time_value + step_size};
+<span class="lineNum">     117 </span>            :       const Time initial_time = single_step_slab.start();
+<span class="lineNum">     118 </span>            :       const TimeDelta fixed_time_step =
+<span class="lineNum">     119 </span>            :           TimeDelta{single_step_slab, Rational{1, 1}};
+<span class="lineNum">     120 </span>            :       TimeStepId initial_time_id{true, 0, initial_time};
+<span class="lineNum">     121 </span>            :       const auto&amp; time_stepper = db::get&lt;::Tags::TimeStepper&lt;TimeStepper&gt;&gt;(box);
+<span class="lineNum">     122 </span>            :       TimeStepId second_time_id =
+<span class="lineNum">     123 </span>            :           time_stepper.next_time_id(initial_time_id, fixed_time_step);
+<span class="lineNum">     124 </span>            : 
+<span class="lineNum">     125 </span>            :       db::item_type&lt;::Tags::HistoryEvolvedVariables&lt;coordinate_variables_tag&gt;&gt;
+<span class="lineNum">     126 </span>            :           coordinate_history;
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span>            :       db::item_type&lt;::Tags::HistoryEvolvedVariables&lt;
+<span class="lineNum">     129 </span>            :           ::Tags::Variables&lt;
+<span class="lineNum">     130 </span>            :               tmpl::list&lt;typename Metavariables::evolved_swsh_tag&gt;&gt;&gt;&gt;
+<span class="lineNum">     131 </span>            :           swsh_history;
+<span class="lineNum">     132 </span>            : 
+<span class="lineNum">     133 </span>            :       return Initialization::merge_into_databox&lt;
+<span class="lineNum">     134 </span>            :           InitializeCharacteristicEvolution, evolution_simple_tags,
+<span class="lineNum">     135 </span>            :           evolution_compute_tags, Initialization::MergePolicy::Overwrite&gt;(
+<span class="lineNum">     136 </span>            :           std::move(box), std::move(initial_time_id),  // NOLINT
+<span class="lineNum">     137 </span>            :           std::move(second_time_id), fixed_time_step,  // NOLINT
+<span class="lineNum">     138 </span>            :           std::move(coordinate_history), std::move(swsh_history));
+<span class="lineNum">     139 </span>            :     }
+<span class="lineNum">     140 </span>            :   };
+<span class="lineNum">     141 </span>            : 
+<span class="lineNum">     142 </span>            :   template &lt;typename Metavariables&gt;
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :   struct CharacteristicTags {</span>
+<span class="lineNum">     144 </span><span class="lineNoCov">          0 :     using boundary_value_variables_tag = ::Tags::Variables&lt;</span>
+<span class="lineNum">     145 </span>            :         tmpl::append&lt;typename Metavariables::cce_boundary_communication_tags,
+<span class="lineNum">     146 </span>            :                      typename Metavariables::cce_gauge_boundary_tags&gt;&gt;;
+<span class="lineNum">     147 </span>            : 
+<span class="lineNum">     148 </span><span class="lineNoCov">          0 :     using scri_variables_tag =</span>
+<span class="lineNum">     149 </span>            :         ::Tags::Variables&lt;typename Metavariables::cce_scri_tags&gt;;
+<span class="lineNum">     150 </span><span class="lineNoCov">          0 :     using volume_variables_tag = ::Tags::Variables&lt;</span>
+<span class="lineNum">     151 </span>            :         tmpl::append&lt;typename Metavariables::cce_integrand_tags,
+<span class="lineNum">     152 </span>            :                      typename Metavariables::cce_integration_independent_tags,
+<span class="lineNum">     153 </span>            :                      typename Metavariables::cce_temporary_equations_tags&gt;&gt;;
+<span class="lineNum">     154 </span><span class="lineNoCov">          0 :     using pre_swsh_derivatives_variables_tag = ::Tags::Variables&lt;</span>
+<span class="lineNum">     155 </span>            :         typename Metavariables::cce_pre_swsh_derivatives_tags&gt;;
+<span class="lineNum">     156 </span><span class="lineNoCov">          0 :     using transform_buffer_variables_tag =</span>
+<span class="lineNum">     157 </span>            :         ::Tags::Variables&lt;typename Metavariables::cce_transform_buffer_tags&gt;;
+<span class="lineNum">     158 </span><span class="lineNoCov">          0 :     using swsh_derivative_variables_tag =</span>
+<span class="lineNum">     159 </span>            :         ::Tags::Variables&lt;typename Metavariables::cce_swsh_derivative_tags&gt;;
+<span class="lineNum">     160 </span><span class="lineNoCov">          0 :     using angular_coordinates_variables_tag =</span>
+<span class="lineNum">     161 </span>            :         ::Tags::Variables&lt;typename Metavariables::cce_angular_coordinate_tags&gt;;
+<span class="lineNum">     162 </span><span class="lineNoCov">          0 :     using coordinate_variables_tag =</span>
+<span class="lineNum">     163 </span>            :         typename Metavariables::evolved_coordinates_variables_tag;
+<span class="lineNum">     164 </span><span class="lineNoCov">          0 :     using dt_coordinate_variables_tag =</span>
+<span class="lineNum">     165 </span>            :         db::add_tag_prefix&lt;::Tags::dt, coordinate_variables_tag&gt;;
+<span class="lineNum">     166 </span><span class="lineNoCov">          0 :     using evolved_swsh_variables_tag =</span>
+<span class="lineNum">     167 </span>            :         ::Tags::Variables&lt;tmpl::list&lt;typename Metavariables::evolved_swsh_tag&gt;&gt;;
+<span class="lineNum">     168 </span><span class="lineNoCov">          0 :     using evolved_swsh_dt_variables_tag = ::Tags::Variables&lt;</span>
+<span class="lineNum">     169 </span>            :         tmpl::list&lt;typename Metavariables::evolved_swsh_dt_tag&gt;&gt;;
+<span class="lineNum">     170 </span>            :     template &lt;typename TagList&gt;
+<span class="lineNum">     171 </span><span class="lineNoCov">          0 :     static auto initialize(</span>
+<span class="lineNum">     172 </span>            :         db::DataBox&lt;TagList&gt;&amp;&amp; box,
+<span class="lineNum">     173 </span>            :         const Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; cache) noexcept {
+<span class="lineNum">     174 </span>            :       const size_t l_max = Parallel::get&lt;Spectral::Swsh::Tags::LMax&gt;(cache);
+<span class="lineNum">     175 </span>            :       const size_t number_of_radial_points =
+<span class="lineNum">     176 </span>            :           Parallel::get&lt;Spectral::Swsh::Tags::NumberOfRadialPoints&gt;(cache);
+<span class="lineNum">     177 </span>            :       const size_t boundary_size =
+<span class="lineNum">     178 </span>            :           Spectral::Swsh::number_of_swsh_collocation_points(l_max);
+<span class="lineNum">     179 </span>            :       const size_t volume_size = boundary_size * number_of_radial_points;
+<span class="lineNum">     180 </span>            :       const size_t transform_buffer_size =
+<span class="lineNum">     181 </span>            :           number_of_radial_points *
+<span class="lineNum">     182 </span>            :           Spectral::Swsh::size_of_libsharp_coefficient_vector(l_max);
+<span class="lineNum">     183 </span>            :       return Initialization::merge_into_databox&lt;
+<span class="lineNum">     184 </span>            :           InitializeCharacteristicEvolution,
+<span class="lineNum">     185 </span>            :           db::AddSimpleTags&lt;
+<span class="lineNum">     186 </span>            :               boundary_value_variables_tag, coordinate_variables_tag,
+<span class="lineNum">     187 </span>            :               dt_coordinate_variables_tag, evolved_swsh_variables_tag,
+<span class="lineNum">     188 </span>            :               evolved_swsh_dt_variables_tag, angular_coordinates_variables_tag,
+<span class="lineNum">     189 </span>            :               scri_variables_tag, volume_variables_tag,
+<span class="lineNum">     190 </span>            :               pre_swsh_derivatives_variables_tag,
+<span class="lineNum">     191 </span>            :               transform_buffer_variables_tag, swsh_derivative_variables_tag,
+<span class="lineNum">     192 </span>            :               Spectral::Swsh::Tags::SwshInterpolator&lt;
+<span class="lineNum">     193 </span>            :                   Tags::CauchyAngularCoords&gt;&gt;,
+<span class="lineNum">     194 </span>            :           db::AddComputeTags&lt;&gt;, Initialization::MergePolicy::Overwrite&gt;(
+<span class="lineNum">     195 </span>            :           std::move(box),
+<span class="lineNum">     196 </span>            :           db::item_type&lt;boundary_value_variables_tag&gt;{boundary_size},
+<span class="lineNum">     197 </span>            :           db::item_type&lt;coordinate_variables_tag&gt;{boundary_size},
+<span class="lineNum">     198 </span>            :           db::item_type&lt;dt_coordinate_variables_tag&gt;{boundary_size},
+<span class="lineNum">     199 </span>            :           db::item_type&lt;evolved_swsh_variables_tag&gt;{volume_size},
+<span class="lineNum">     200 </span>            :           db::item_type&lt;evolved_swsh_dt_variables_tag&gt;{volume_size},
+<span class="lineNum">     201 </span>            :           db::item_type&lt;angular_coordinates_variables_tag&gt;{boundary_size},
+<span class="lineNum">     202 </span>            :           db::item_type&lt;scri_variables_tag&gt;{boundary_size},
+<span class="lineNum">     203 </span>            :           db::item_type&lt;volume_variables_tag&gt;{volume_size},
+<span class="lineNum">     204 </span>            :           db::item_type&lt;pre_swsh_derivatives_variables_tag&gt;{volume_size, 0.0},
+<span class="lineNum">     205 </span>            :           db::item_type&lt;transform_buffer_variables_tag&gt;{transform_buffer_size,
+<span class="lineNum">     206 </span>            :                                                         0.0},
+<span class="lineNum">     207 </span>            :           db::item_type&lt;swsh_derivative_variables_tag&gt;{volume_size, 0.0},
+<span class="lineNum">     208 </span>            :           Spectral::Swsh::SwshInterpolator{});
+<span class="lineNum">     209 </span>            :     }
+<span class="lineNum">     210 </span>            :   };
+<span class="lineNum">     211 </span>            : 
+<span class="lineNum">     212 </span>            :   template &lt;class Metavariables&gt;
+<span class="lineNum">     213 </span><span class="lineNoCov">          0 :   using return_tag_list = tmpl::append&lt;</span>
+<span class="lineNum">     214 </span>            :       typename EvolutionTags&lt;Metavariables&gt;::evolution_simple_tags,
+<span class="lineNum">     215 </span>            :       typename EvolutionTags&lt;Metavariables&gt;::evolution_compute_tags&gt;;
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span>            :   template &lt;
+<span class="lineNum">     218 </span>            :       typename DbTags, typename... InboxTags, typename Metavariables,
+<span class="lineNum">     219 </span>            :       typename ArrayIndex, typename ActionList, typename ParallelComponent,
+<span class="lineNum">     220 </span>            :       Requires&lt;tmpl::list_contains_v&lt;DbTags, InitializationTags::StartTime&gt;&gt; =
+<span class="lineNum">     221 </span>            :           nullptr&gt;
+<span class="lineNum">     222 </span><span class="lineNoCov">          0 :   static auto apply(db::DataBox&lt;DbTags&gt;&amp; box,</span>
+<span class="lineNum">     223 </span>            :                     const tuples::TaggedTuple&lt;InboxTags...&gt;&amp; /*inboxes*/,
+<span class="lineNum">     224 </span>            :                     const Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; cache,
+<span class="lineNum">     225 </span>            :                     const ArrayIndex&amp; /*array_index*/,
+<span class="lineNum">     226 </span>            :                     const ActionList /*meta*/,
+<span class="lineNum">     227 </span>            :                     const ParallelComponent* const /*meta*/) noexcept {
+<span class="lineNum">     228 </span>            :     auto evolution_box =
+<span class="lineNum">     229 </span>            :         EvolutionTags&lt;Metavariables&gt;::initialize(std::move(box), cache);
+<span class="lineNum">     230 </span>            :     auto characteristic_evolution_box =
+<span class="lineNum">     231 </span>            :         CharacteristicTags&lt;Metavariables&gt;::initialize(std::move(evolution_box),
+<span class="lineNum">     232 </span>            :                                                       cache);
+<span class="lineNum">     233 </span>            :     auto initialization_moved_box =
+<span class="lineNum">     234 </span>            :         Initialization::merge_into_databox&lt;InitializeCharacteristicEvolution,
+<span class="lineNum">     235 </span>            :                                            db::AddSimpleTags&lt;Tags::EndTime&gt;,
+<span class="lineNum">     236 </span>            :                                            db::AddComputeTags&lt;&gt;&gt;(
+<span class="lineNum">     237 </span>            :             std::move(characteristic_evolution_box),
+<span class="lineNum">     238 </span>            :             db::get&lt;InitializationTags::EndTime&gt;(characteristic_evolution_box));
+<span class="lineNum">     239 </span>            :     return std::make_tuple(std::move(initialization_moved_box));
+<span class="lineNum">     240 </span>            :   }
+<span class="lineNum">     241 </span>            : 
+<span class="lineNum">     242 </span>            :   template &lt;typename DbTags, typename... InboxTags, typename Metavariables,
+<span class="lineNum">     243 </span>            :             typename ArrayIndex, typename ActionList,
+<span class="lineNum">     244 </span>            :             typename ParallelComponent,
+<span class="lineNum">     245 </span>            :             Requires&lt;not tmpl::list_contains_v&lt;
+<span class="lineNum">     246 </span>            :                 DbTags, InitializationTags::StartTime&gt;&gt; = nullptr&gt;
+<span class="lineNum">     247 </span><span class="lineNoCov">          0 :   static auto apply(db::DataBox&lt;DbTags&gt;&amp; box,</span>
+<span class="lineNum">     248 </span>            :                     const tuples::TaggedTuple&lt;InboxTags...&gt;&amp; /*inboxes*/,
+<span class="lineNum">     249 </span>            :                     const Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; /*cache*/,
+<span class="lineNum">     250 </span>            :                     const ArrayIndex&amp; /*array_index*/,
+<span class="lineNum">     251 </span>            :                     const ActionList /*meta*/,
+<span class="lineNum">     252 </span>            :                     const ParallelComponent* const /*meta*/) noexcept {
+<span class="lineNum">     253 </span>            :     ERROR(
+<span class="lineNum">     254 </span>            :         &quot;The DataBox is missing required dependency &quot;
+<span class="lineNum">     255 </span>            :         &quot;`Cce::InitializationTags::LMax.`&quot;);
+<span class="lineNum">     256 </span>            :     // return required for type inference, this code should be unreachable due
+<span class="lineNum">     257 </span>            :     // to the `ERROR` on the previous line
+<span class="lineNum">     258 </span>            :     return std::make_tuple(std::move(box));
+<span class="lineNum">     259 </span>            :   }
+<span class="lineNum">     260 </span>            : };
+<span class="lineNum">     261 </span>            : }  // namespace Actions
+<span class="lineNum">     262 </span>            : }  // namespace Cce
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

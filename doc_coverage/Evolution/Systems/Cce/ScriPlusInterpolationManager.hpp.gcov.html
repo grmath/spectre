@@ -1,0 +1,753 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - cbfbf67b7981e589bee915450d97bc54a82020ab - Evolution/Systems/Cce/ScriPlusInterpolationManager.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title"> SpECTRE Documentation Coverage Report</td></tr>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">Evolution/Systems/Cce</a> - ScriPlusInterpolationManager.hpp</td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+             <td class="headerItem">Commit:</td>
+             <td class="headerValue"><a target="_blank" href="https://github.com/sxs-collaboration/spectre/commit/cbfbf67b7981e589bee915450d97bc54a82020ab">cbfbf67b7981e589bee915450d97bc54a82020ab</a></td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntry">36</td>
+            <td class="headerCovTableEntryLo">66.7 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2020-02-19 21:30:39</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+</td>
+            <td></td>
+          </tr>
+          <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<span class="lineNum">       1 </span><span class="lineNoCov">          0 : // Distributed under the MIT License.</span>
+<span class="lineNum">       2 </span>            : // See LICENSE.txt for details.
+<span class="lineNum">       3 </span>            : 
+<span class="lineNum">       4 </span>            : #pragma once
+<span class="lineNum">       5 </span>            : 
+<span class="lineNum">       6 </span>            : #include &lt;algorithm&gt;
+<span class="lineNum">       7 </span>            : #include &lt;complex&gt;
+<span class="lineNum">       8 </span>            : #include &lt;cstddef&gt;
+<span class="lineNum">       9 </span>            : #include &lt;deque&gt;
+<span class="lineNum">      10 </span>            : #include &lt;memory&gt;
+<span class="lineNum">      11 </span>            : #include &lt;utility&gt;
+<span class="lineNum">      12 </span>            : #include &lt;vector&gt;
+<span class="lineNum">      13 </span>            : 
+<span class="lineNum">      14 </span>            : #include &quot;DataStructures/DataVector.hpp&quot;
+<span class="lineNum">      15 </span>            : #include &quot;ErrorHandling/Assert.hpp&quot;
+<span class="lineNum">      16 </span>            : #include &quot;ErrorHandling/Error.hpp&quot;
+<span class="lineNum">      17 </span>            : #include &quot;Evolution/Systems/Cce/ReadBoundaryDataH5.hpp&quot;
+<span class="lineNum">      18 </span>            : #include &quot;NumericalAlgorithms/Interpolation/SpanInterpolator.hpp&quot;
+<span class="lineNum">      19 </span>            : #include &quot;NumericalAlgorithms/LinearOperators/ApplyMatrices.hpp&quot;
+<span class="lineNum">      20 </span>            : #include &quot;Utilities/Algorithm.hpp&quot;
+<span class="lineNum">      21 </span>            : #include &quot;Utilities/MakeArray.hpp&quot;
+<span class="lineNum">      22 </span>            : 
+<span class="lineNum">      23 </span>            : namespace Cce {
+<span class="lineNum">      24 </span>            : 
+<span class="lineNum">      25 </span>            : /*!
+<span class="lineNum">      26 </span>            :  * \brief Stores necessary data and interpolates on to new time points at scri+.
+<span class="lineNum">      27 </span>            :  *
+<span class="lineNum">      28 </span>            :  * \details The coordinate time used for the CCE evolution is not the same as
+<span class="lineNum">      29 </span>            :  * the asymptotic inertial retarded time, which is determined through a separate
+<span class="lineNum">      30 </span>            :  * evolution equation. This class manages the scri+ data passed in (via
+<span class="lineNum">      31 </span>            :  * `insert_data()`) along with the set of inertial retarded times associated
+<span class="lineNum">      32 </span>            :  * with that data, and interpolates to a set of requested times (supplied via
+<span class="lineNum">      33 </span>            :  * `insert_target_time()`).
+<span class="lineNum">      34 </span>            :  *
+<span class="lineNum">      35 </span>            :  * Template parameters:
+<span class="lineNum">      36 </span>            :  * - `VectorTypeToInterpolate`: the vector type associated with the values to
+<span class="lineNum">      37 </span>            :  * interpolate.
+<span class="lineNum">      38 </span>            :  * - `Tag`: The tag associated with the interpolation procedure. This determines
+<span class="lineNum">      39 </span>            :  * the behavior of the interpolation return value. The default is just
+<span class="lineNum">      40 </span>            :  * interpolation, if `Tag` has prefix `::Tags::Multiplies` or `Tags::Du`, the
+<span class="lineNum">      41 </span>            :  * interpolator performs the additional multiplication or time derivative as a
+<span class="lineNum">      42 </span>            :  * step in the interpolation procedure.
+<span class="lineNum">      43 </span>            :  */
+<span class="lineNum">      44 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">      45 </span><span class="lineCov">          1 : struct ScriPlusInterpolationManager {</span>
+<span class="lineNum">      46 </span>            :  public:
+<span class="lineNum">      47 </span><span class="lineNoCov">          0 :   ScriPlusInterpolationManager(</span>
+<span class="lineNum">      48 </span>            :       const size_t target_number_of_points, const size_t vector_size,
+<span class="lineNum">      49 </span>            :       std::unique_ptr&lt;intrp::SpanInterpolator&gt; interpolator) noexcept
+<span class="lineNum">      50 </span>            :       : vector_size_{vector_size},
+<span class="lineNum">      51 </span>            :         target_number_of_points_{target_number_of_points},
+<span class="lineNum">      52 </span>            :         interpolator_{std::move(interpolator)} {}
+<span class="lineNum">      53 </span>            : 
+<span class="lineNum">      54 </span>            :   /// \brief provide data to the interpolation manager.
+<span class="lineNum">      55 </span>            :   ///
+<span class="lineNum">      56 </span>            :   /// \details `u_bondi` is a vector of inertial times, and `to_interpolate` is
+<span class="lineNum">      57 </span>            :   /// the vector of values that will be interpolated to target times.
+<span class="lineNum">      58 </span><span class="lineCov">          1 :   void insert_data(const DataVector&amp; u_bondi,</span>
+<span class="lineNum">      59 </span>            :                    const VectorTypeToInterpolate&amp; to_interpolate) noexcept {
+<span class="lineNum">      60 </span>            :     ASSERT(to_interpolate.size() == vector_size_,
+<span class="lineNum">      61 </span>            :            &quot;Inserted data must be of size specified at construction: &quot;
+<span class="lineNum">      62 </span>            :                &lt;&lt; vector_size_
+<span class="lineNum">      63 </span>            :                &lt;&lt; &quot; and provided data is of size: &quot; &lt;&lt; to_interpolate.size());
+<span class="lineNum">      64 </span>            :     u_bondi_values_.push_back(u_bondi);
+<span class="lineNum">      65 </span>            :     to_interpolate_values_.push_back(to_interpolate);
+<span class="lineNum">      66 </span>            :     u_bondi_ranges_.push_back(std::make_pair(min(u_bondi), max(u_bondi)));
+<span class="lineNum">      67 </span>            :   }
+<span class="lineNum">      68 </span>            : 
+<span class="lineNum">      69 </span>            :   /// \brief Request a target time to be interpolated to when enough data has
+<span class="lineNum">      70 </span>            :   /// been accumulated.
+<span class="lineNum">      71 </span>            :   ///
+<span class="lineNum">      72 </span>            :   /// For optimization, we assume that these are inserted in ascending order.
+<span class="lineNum">      73 </span><span class="lineCov">          1 :   void insert_target_time(const double time) noexcept {</span>
+<span class="lineNum">      74 </span>            :     target_times_.push_back(time);
+<span class="lineNum">      75 </span>            :     // if this is the first time in the deque, we should use it to determine
+<span class="lineNum">      76 </span>            :     // whether some of the old data is ready to be removed. In other cases, this
+<span class="lineNum">      77 </span>            :     // check can be performed when a time is removed from the queue via
+<span class="lineNum">      78 </span>            :     // `interpolate_and_pop_first_time`
+<span class="lineNum">      79 </span>            :     if (target_times_.size() == 1) {
+<span class="lineNum">      80 </span>            :       remove_unneeded_early_times();
+<span class="lineNum">      81 </span>            :     }
+<span class="lineNum">      82 </span>            :   }
+<span class="lineNum">      83 </span>            : 
+<span class="lineNum">      84 </span>            :   /// \brief Determines whether enough data before and after the first time in
+<span class="lineNum">      85 </span>            :   /// the target time queue has been provided to interpolate.
+<span class="lineNum">      86 </span>            :   ///
+<span class="lineNum">      87 </span>            :   /// \details If possible, this function will require that the target time to
+<span class="lineNum">      88 </span>            :   /// be interpolated is reasonably centered on the range, but will settle for
+<span class="lineNum">      89 </span>            :   /// non-centered data if the time is too early for the given data, which is
+<span class="lineNum">      90 </span>            :   /// necessary to get the first couple of times out of the simulation. This
+<span class="lineNum">      91 </span>            :   /// function always returns false if all of the provided data is earlier than
+<span class="lineNum">      92 </span>            :   /// the next target time, indicating that the caller should wait until more
+<span class="lineNum">      93 </span>            :   /// data has been provided before interpolating.
+<span class="lineNum">      94 </span><span class="lineCov">          1 :   bool first_time_is_ready_to_interpolate() const noexcept;</span>
+<span class="lineNum">      95 </span>            : 
+<span class="lineNum">      96 </span>            :   /// \brief Interpolate to the first target time in the queue, returning both
+<span class="lineNum">      97 </span>            :   /// the time and the interpolated data at that time.
+<span class="lineNum">      98 </span>            :   ///
+<span class="lineNum">      99 </span>            :   /// \note If this function is not able to interpolate to the full accuracy
+<span class="lineNum">     100 </span>            :   /// using a centered stencil, it will perform the best interpolation
+<span class="lineNum">     101 </span>            :   /// available.
+<span class="lineNum">     102 </span>            :   ///
+<span class="lineNum">     103 </span>            :   /// \warning This function will extrapolate if the target times are
+<span class="lineNum">     104 </span>            :   /// outside the range of data the class has been provided. This is intentional
+<span class="lineNum">     105 </span>            :   /// to support small extrapolation at the end of a simulation when no further
+<span class="lineNum">     106 </span>            :   /// data is available, but for full accuracy, check
+<span class="lineNum">     107 </span>            :   /// `first_time_is_ready_to_interpolate` before calling the interpolation
+<span class="lineNum">     108 </span>            :   /// functions
+<span class="lineNum">     109 </span><span class="lineCov">          1 :   std::pair&lt;double, VectorTypeToInterpolate&gt; interpolate_first_time() noexcept;</span>
+<span class="lineNum">     110 </span>            : 
+<span class="lineNum">     111 </span>            :   /// \brief Interpolate to the first target time in the queue, returning both
+<span class="lineNum">     112 </span>            :   /// the time and the interpolated data at that time, and remove the first time
+<span class="lineNum">     113 </span>            :   /// from the queue.
+<span class="lineNum">     114 </span>            :   ///
+<span class="lineNum">     115 </span>            :   /// \note If this function is not able to interpolate to the full accuracy
+<span class="lineNum">     116 </span>            :   /// using a centered stencil, it will perform the best interpolation
+<span class="lineNum">     117 </span>            :   /// available.
+<span class="lineNum">     118 </span>            :   ///
+<span class="lineNum">     119 </span>            :   /// \warning This function will extrapolate if the target times are
+<span class="lineNum">     120 </span>            :   /// outside the range of data the class has been provided. This is intentional
+<span class="lineNum">     121 </span>            :   /// to support small extrapolation at the end of a simulation when no further
+<span class="lineNum">     122 </span>            :   /// data is available, but for full accuracy, check
+<span class="lineNum">     123 </span>            :   /// `first_time_is_ready_to_interpolate` before calling the interpolation
+<span class="lineNum">     124 </span>            :   /// functions
+<span class="lineNum">     125 </span>            :   std::pair&lt;double, VectorTypeToInterpolate&gt;
+<span class="lineNum">     126 </span><span class="lineCov">          1 :   interpolate_and_pop_first_time() noexcept;</span>
+<span class="lineNum">     127 </span>            : 
+<span class="lineNum">     128 </span>            :   /// \brief return the number of times in the target times queue
+<span class="lineNum">     129 </span><span class="lineCov">          1 :   size_t number_of_target_times() noexcept { return target_times_.size(); }</span>
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span>            :   /// \brief return the number of data points that have been provided to the
+<span class="lineNum">     132 </span>            :   /// interpolation manager
+<span class="lineNum">     133 </span><span class="lineCov">          1 :   size_t number_of_data_points() noexcept { return u_bondi_ranges_.size(); }</span>
+<span class="lineNum">     134 </span>            : 
+<span class="lineNum">     135 </span>            :  private:
+<span class="lineNum">     136 </span><span class="lineNoCov">          0 :   void remove_unneeded_early_times() noexcept;</span>
+<span class="lineNum">     137 </span>            : 
+<span class="lineNum">     138 </span>            :   friend struct ScriPlusInterpolationManager&lt;VectorTypeToInterpolate,
+<span class="lineNum">     139 </span>            :                                              Tags::Du&lt;Tag&gt;&gt;;
+<span class="lineNum">     140 </span>            : 
+<span class="lineNum">     141 </span><span class="lineNoCov">          0 :   std::deque&lt;DataVector&gt; u_bondi_values_;</span>
+<span class="lineNum">     142 </span><span class="lineNoCov">          0 :   std::deque&lt;VectorTypeToInterpolate&gt; to_interpolate_values_;</span>
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :   std::deque&lt;std::pair&lt;double, double&gt;&gt; u_bondi_ranges_;</span>
+<span class="lineNum">     144 </span><span class="lineNoCov">          0 :   std::deque&lt;double&gt; target_times_;</span>
+<span class="lineNum">     145 </span><span class="lineNoCov">          0 :   size_t vector_size_;</span>
+<span class="lineNum">     146 </span><span class="lineNoCov">          0 :   size_t target_number_of_points_;</span>
+<span class="lineNum">     147 </span><span class="lineNoCov">          0 :   std::unique_ptr&lt;intrp::SpanInterpolator&gt; interpolator_;</span>
+<span class="lineNum">     148 </span>            : };
+<span class="lineNum">     149 </span>            : 
+<span class="lineNum">     150 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     151 </span>            : bool ScriPlusInterpolationManager&lt;
+<span class="lineNum">     152 </span>            :     VectorTypeToInterpolate, Tag&gt;::first_time_is_ready_to_interpolate() const
+<span class="lineNum">     153 </span>            :     noexcept {
+<span class="lineNum">     154 </span>            :   if (target_times_.empty()) {
+<span class="lineNum">     155 </span>            :     return false;
+<span class="lineNum">     156 </span>            :   }
+<span class="lineNum">     157 </span>            :   auto maxes_below = alg::count_if(
+<span class="lineNum">     158 </span>            :       u_bondi_ranges_, [this](const std::pair&lt;double, double&gt; time) noexcept {
+<span class="lineNum">     159 </span>            :         return time.second &lt;= target_times_.front();
+<span class="lineNum">     160 </span>            :       });
+<span class="lineNum">     161 </span>            :   auto mins_above = alg::count_if(
+<span class="lineNum">     162 </span>            :       u_bondi_ranges_, [this](const std::pair&lt;double, double&gt; time) noexcept {
+<span class="lineNum">     163 </span>            :         return time.first &gt; target_times_.front();
+<span class="lineNum">     164 </span>            :       });
+<span class="lineNum">     165 </span>            : 
+<span class="lineNum">     166 </span>            :   // we might ask for a time that's too close to the end or the beginning of
+<span class="lineNum">     167 </span>            :   // our data, in which case we will settle for at least one point below and
+<span class="lineNum">     168 </span>            :   // above and a sufficient number of total points.
+<span class="lineNum">     169 </span>            :   // This will always be `false` if the earliest target time is later than all
+<span class="lineNum">     170 </span>            :   // provided data points, which would require extrapolation
+<span class="lineNum">     171 </span>            :   return ((static_cast&lt;size_t&gt;(maxes_below) &gt; target_number_of_points_ or
+<span class="lineNum">     172 </span>            :            static_cast&lt;size_t&gt;(maxes_below + mins_above) &gt;
+<span class="lineNum">     173 </span>            :                2 * target_number_of_points_) and
+<span class="lineNum">     174 </span>            :           static_cast&lt;size_t&gt;(mins_above) &gt; target_number_of_points_);
+<span class="lineNum">     175 </span>            : }
+<span class="lineNum">     176 </span>            : 
+<span class="lineNum">     177 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     178 </span>            : std::pair&lt;double, VectorTypeToInterpolate&gt; ScriPlusInterpolationManager&lt;
+<span class="lineNum">     179 </span>            :     VectorTypeToInterpolate, Tag&gt;::interpolate_first_time() noexcept {
+<span class="lineNum">     180 </span>            :   if (target_times_.empty()) {
+<span class="lineNum">     181 </span>            :     ERROR(&quot;There are no target times to interpolate.&quot;);
+<span class="lineNum">     182 </span>            :   }
+<span class="lineNum">     183 </span>            :   if (to_interpolate_values_.size() &lt; 2 * target_number_of_points_) {
+<span class="lineNum">     184 </span>            :     ERROR(&quot;Insufficient data points to continue interpolation: have &quot;
+<span class="lineNum">     185 </span>            :           &lt;&lt; to_interpolate_values_.size() &lt;&lt; &quot;, need at least&quot;
+<span class="lineNum">     186 </span>            :           &lt;&lt; 2 * target_number_of_points_);
+<span class="lineNum">     187 </span>            :   }
+<span class="lineNum">     188 </span>            : 
+<span class="lineNum">     189 </span>            :   VectorTypeToInterpolate result{vector_size_};
+<span class="lineNum">     190 </span>            :   const size_t interpolation_data_size = to_interpolate_values_.size();
+<span class="lineNum">     191 </span>            : 
+<span class="lineNum">     192 </span>            :   VectorTypeToInterpolate interpolation_values{2 * target_number_of_points_};
+<span class="lineNum">     193 </span>            :   DataVector interpolation_times{2 * target_number_of_points_};
+<span class="lineNum">     194 </span>            :   for (size_t i = 0; i &lt; vector_size_; ++i) {
+<span class="lineNum">     195 </span>            :     // binary search assumes times placed in sorted order
+<span class="lineNum">     196 </span>            :     auto upper_bound_offset = static_cast&lt;size_t&gt;(std::distance(
+<span class="lineNum">     197 </span>            :         u_bondi_values_.begin(),
+<span class="lineNum">     198 </span>            :         std::upper_bound(
+<span class="lineNum">     199 </span>            :             u_bondi_values_.begin(), u_bondi_values_.end(),
+<span class="lineNum">     200 </span>            :             target_times_.front(),
+<span class="lineNum">     201 </span>            :             [&amp;i](const double rhs, const DataVector&amp; lhs) noexcept {
+<span class="lineNum">     202 </span>            :               return rhs &lt; lhs[i];
+<span class="lineNum">     203 </span>            :             })));
+<span class="lineNum">     204 </span>            :     size_t lower_bound_offset =
+<span class="lineNum">     205 </span>            :         upper_bound_offset == 0 ? 0 : upper_bound_offset - 1;
+<span class="lineNum">     206 </span>            : 
+<span class="lineNum">     207 </span>            :     if (upper_bound_offset + target_number_of_points_ &gt;
+<span class="lineNum">     208 </span>            :         interpolation_data_size) {
+<span class="lineNum">     209 </span>            :       upper_bound_offset = interpolation_data_size;
+<span class="lineNum">     210 </span>            :       lower_bound_offset =
+<span class="lineNum">     211 </span>            :           interpolation_data_size - 2 * target_number_of_points_;
+<span class="lineNum">     212 </span>            :     } else if (lower_bound_offset &lt; target_number_of_points_ - 1) {
+<span class="lineNum">     213 </span>            :       lower_bound_offset = 0;
+<span class="lineNum">     214 </span>            :       upper_bound_offset = 2 * target_number_of_points_;
+<span class="lineNum">     215 </span>            :     } else {
+<span class="lineNum">     216 </span>            :       lower_bound_offset = lower_bound_offset + 1 - target_number_of_points_;
+<span class="lineNum">     217 </span>            :       upper_bound_offset = lower_bound_offset + 2 * target_number_of_points_;
+<span class="lineNum">     218 </span>            :     }
+<span class="lineNum">     219 </span>            :     auto interpolation_values_begin =
+<span class="lineNum">     220 </span>            :         to_interpolate_values_.begin() +
+<span class="lineNum">     221 </span>            :         static_cast&lt;ptrdiff_t&gt;(lower_bound_offset);
+<span class="lineNum">     222 </span>            :     auto interpolation_times_begin =
+<span class="lineNum">     223 </span>            :         u_bondi_values_.begin() + static_cast&lt;ptrdiff_t&gt;(lower_bound_offset);
+<span class="lineNum">     224 </span>            :     auto interpolation_times_end =
+<span class="lineNum">     225 </span>            :         u_bondi_values_.begin() + static_cast&lt;ptrdiff_t&gt;(upper_bound_offset);
+<span class="lineNum">     226 </span>            : 
+<span class="lineNum">     227 </span>            :     // interpolate using the data sets in the restricted iterators
+<span class="lineNum">     228 </span>            :     auto value_it = interpolation_values_begin;
+<span class="lineNum">     229 </span>            :     size_t vector_position = 0;
+<span class="lineNum">     230 </span>            :     for (auto time_it = interpolation_times_begin;
+<span class="lineNum">     231 </span>            :          time_it != interpolation_times_end;
+<span class="lineNum">     232 </span>            :          ++time_it, ++value_it, ++vector_position) {
+<span class="lineNum">     233 </span>            :       interpolation_values[vector_position] = (*value_it)[i];
+<span class="lineNum">     234 </span>            :       interpolation_times[vector_position] = (*time_it)[i];
+<span class="lineNum">     235 </span>            :     }
+<span class="lineNum">     236 </span>            :     result[i] = interpolator_-&gt;interpolate(
+<span class="lineNum">     237 </span>            :         gsl::span&lt;const double&gt;(interpolation_times.data(),
+<span class="lineNum">     238 </span>            :                                 interpolation_times.size()),
+<span class="lineNum">     239 </span>            :         gsl::span&lt;const typename VectorTypeToInterpolate::value_type&gt;(
+<span class="lineNum">     240 </span>            :             interpolation_values.data(), interpolation_values.size()),
+<span class="lineNum">     241 </span>            :         target_times_.front());
+<span class="lineNum">     242 </span>            :   }
+<span class="lineNum">     243 </span>            :   return std::make_pair(target_times_.front(), std::move(result));
+<span class="lineNum">     244 </span>            : }
+<span class="lineNum">     245 </span>            : 
+<span class="lineNum">     246 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     247 </span>            : std::pair&lt;double, VectorTypeToInterpolate&gt; ScriPlusInterpolationManager&lt;
+<span class="lineNum">     248 </span>            :     VectorTypeToInterpolate, Tag&gt;::interpolate_and_pop_first_time() noexcept {
+<span class="lineNum">     249 </span>            :   std::pair&lt;double, VectorTypeToInterpolate&gt; interpolated =
+<span class="lineNum">     250 </span>            :       interpolate_first_time();
+<span class="lineNum">     251 </span>            :   target_times_.pop_front();
+<span class="lineNum">     252 </span>            : 
+<span class="lineNum">     253 </span>            :   if (not target_times_.empty()) {
+<span class="lineNum">     254 </span>            :     remove_unneeded_early_times();
+<span class="lineNum">     255 </span>            :   }
+<span class="lineNum">     256 </span>            :   return interpolated;
+<span class="lineNum">     257 </span>            : }
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     260 </span>            : void ScriPlusInterpolationManager&lt;VectorTypeToInterpolate,
+<span class="lineNum">     261 </span>            :                                   Tag&gt;::remove_unneeded_early_times() noexcept {
+<span class="lineNum">     262 </span>            :   // pop times we no longer need because their maxes are too far in the past
+<span class="lineNum">     263 </span>            :   auto time_it = u_bondi_ranges_.begin();
+<span class="lineNum">     264 </span>            :   size_t times_counter = 0;
+<span class="lineNum">     265 </span>            :   while (time_it &lt; u_bondi_ranges_.end() and
+<span class="lineNum">     266 </span>            :          (*time_it).second &lt; target_times_.front()) {
+<span class="lineNum">     267 </span>            :     if (times_counter &gt; target_number_of_points_ and
+<span class="lineNum">     268 </span>            :         u_bondi_ranges_.size() &gt;= 2 * target_number_of_points_) {
+<span class="lineNum">     269 </span>            :       u_bondi_ranges_.pop_front();
+<span class="lineNum">     270 </span>            :       u_bondi_values_.pop_front();
+<span class="lineNum">     271 </span>            :       to_interpolate_values_.pop_front();
+<span class="lineNum">     272 </span>            :     } else {
+<span class="lineNum">     273 </span>            :       ++times_counter;
+<span class="lineNum">     274 </span>            :     }
+<span class="lineNum">     275 </span>            :     ++time_it;
+<span class="lineNum">     276 </span>            :   }
+<span class="lineNum">     277 </span>            : }
+<span class="lineNum">     278 </span>            : 
+<span class="lineNum">     279 </span>            : /*!
+<span class="lineNum">     280 </span>            :  * \brief Stores necessary data and interpolates on to new time points at scri+,
+<span class="lineNum">     281 </span>            :  * multiplying two results together before supplying the result.
+<span class="lineNum">     282 </span>            :  *
+<span class="lineNum">     283 </span>            :  * \details The coordinate time used for the CCE evolution is not the same as
+<span class="lineNum">     284 </span>            :  * the asymptotic inertial retarded time, which is determined through a separate
+<span class="lineNum">     285 </span>            :  * evolution equation. This class manages the two sets of  scri+ data passed in
+<span class="lineNum">     286 </span>            :  * (via `insert_data()`) along with the set of inertial retarded times
+<span class="lineNum">     287 </span>            :  * associated with that data, and interpolates to a set of inertial requested
+<span class="lineNum">     288 </span>            :  * times (supplied via `insert_target_time()`), multiplying the two
+<span class="lineNum">     289 </span>            :  * interpolation results together before returning.
+<span class="lineNum">     290 </span>            :  *
+<span class="lineNum">     291 </span>            :  * Template parameters:
+<span class="lineNum">     292 </span>            :  * - `VectorTypeToInterpolate`: the vector type associated with the values to
+<span class="lineNum">     293 </span>            :  * interpolate.
+<span class="lineNum">     294 </span>            :  * - `::Tags::Multiplies&lt;MultipliesLhs, MultipliesRhs&gt;`: The tag associated with
+<span class="lineNum">     295 </span>            :  * the interpolation procedure. This determines the behavior of the
+<span class="lineNum">     296 </span>            :  * interpolation return value. The default is just interpolation, if `Tag` has
+<span class="lineNum">     297 </span>            :  * prefix  `::Tags::Multiplies` (this case) or `Tags::Du`, the interpolator
+<span class="lineNum">     298 </span>            :  * performs the additional multiplication or time derivative as a step in the
+<span class="lineNum">     299 </span>            :  * interpolation procedure.
+<span class="lineNum">     300 </span>            :  */
+<span class="lineNum">     301 </span>            : template &lt;typename VectorTypeToInterpolate, typename MultipliesLhs,
+<span class="lineNum">     302 </span>            :           typename MultipliesRhs&gt;
+<span class="lineNum">     303 </span>            : struct ScriPlusInterpolationManager&lt;
+<span class="lineNum">     304 </span><span class="lineCov">          1 :     VectorTypeToInterpolate, ::Tags::Multiplies&lt;MultipliesLhs, MultipliesRhs&gt;&gt; {</span>
+<span class="lineNum">     305 </span>            :  public:
+<span class="lineNum">     306 </span><span class="lineNoCov">          0 :   ScriPlusInterpolationManager(</span>
+<span class="lineNum">     307 </span>            :       const size_t target_number_of_points, const size_t vector_size,
+<span class="lineNum">     308 </span>            :       std::unique_ptr&lt;intrp::SpanInterpolator&gt; interpolator) noexcept
+<span class="lineNum">     309 </span>            :       : interpolation_manager_lhs_{target_number_of_points, vector_size,
+<span class="lineNum">     310 </span>            :                                    interpolator-&gt;get_clone()},
+<span class="lineNum">     311 </span>            :         interpolation_manager_rhs_{target_number_of_points, vector_size,
+<span class="lineNum">     312 </span>            :                                    std::move(interpolator)} {}
+<span class="lineNum">     313 </span>            : 
+<span class="lineNum">     314 </span>            :   /// \brief provide data to the interpolation manager.
+<span class="lineNum">     315 </span>            :   ///
+<span class="lineNum">     316 </span>            :   /// \details `u_bondi` is a vector of inertial times, and `to_interpolate_lhs`
+<span class="lineNum">     317 </span>            :   /// and `to_interpolate_rhs` are the vector of values that will be
+<span class="lineNum">     318 </span>            :   /// interpolated to target times. The interpolation result will be the product
+<span class="lineNum">     319 </span>            :   /// of the interpolated lhs and rhs vectors.
+<span class="lineNum">     320 </span><span class="lineCov">          1 :   void insert_data(const DataVector&amp; u_bondi,</span>
+<span class="lineNum">     321 </span>            :                    const VectorTypeToInterpolate&amp; to_interpolate_lhs,
+<span class="lineNum">     322 </span>            :                    const VectorTypeToInterpolate&amp; to_interpolate_rhs) noexcept {
+<span class="lineNum">     323 </span>            :     interpolation_manager_lhs_.insert_data(u_bondi, to_interpolate_lhs);
+<span class="lineNum">     324 </span>            :     interpolation_manager_rhs_.insert_data(u_bondi, to_interpolate_rhs);
+<span class="lineNum">     325 </span>            :   }
+<span class="lineNum">     326 </span>            : 
+<span class="lineNum">     327 </span>            :   /// \brief Request a target time to be interpolated to when enough data has
+<span class="lineNum">     328 </span>            :   /// been accumulated.
+<span class="lineNum">     329 </span>            :   ///
+<span class="lineNum">     330 </span>            :   /// For optimization, we assume that these are inserted in ascending order.
+<span class="lineNum">     331 </span><span class="lineCov">          1 :   void insert_target_time(const double time) noexcept {</span>
+<span class="lineNum">     332 </span>            :     interpolation_manager_lhs_.insert_target_time(time);
+<span class="lineNum">     333 </span>            :     interpolation_manager_rhs_.insert_target_time(time);
+<span class="lineNum">     334 </span>            :   }
+<span class="lineNum">     335 </span>            : 
+<span class="lineNum">     336 </span>            :   /// \brief Determines whether enough data before and after the first time in
+<span class="lineNum">     337 </span>            :   /// the target time queue has been provided to interpolate.
+<span class="lineNum">     338 </span>            :   ///
+<span class="lineNum">     339 </span>            :   /// \details If possible, this function will require that the target time to
+<span class="lineNum">     340 </span>            :   /// be interpolated is reasonably centered on the range, but will settle for
+<span class="lineNum">     341 </span>            :   /// non-centered data if the time is too early for the given data, which is
+<span class="lineNum">     342 </span>            :   /// necessary to get the first couple of times out of the simulation. This
+<span class="lineNum">     343 </span>            :   /// function always returns false if all of the provided data is earlier than
+<span class="lineNum">     344 </span>            :   /// the next target time, indicating that the caller should wait until more
+<span class="lineNum">     345 </span>            :   /// data has been provided before interpolating.
+<span class="lineNum">     346 </span><span class="lineCov">          1 :   bool first_time_is_ready_to_interpolate() const noexcept {</span>
+<span class="lineNum">     347 </span>            :     return interpolation_manager_lhs_.first_time_is_ready_to_interpolate() and
+<span class="lineNum">     348 </span>            :            interpolation_manager_rhs_.first_time_is_ready_to_interpolate();
+<span class="lineNum">     349 </span>            :   }
+<span class="lineNum">     350 </span>            : 
+<span class="lineNum">     351 </span>            :   /// \brief Interpolate to the first target time in the queue, returning both
+<span class="lineNum">     352 </span>            :   /// the time and the interpolated-and-multiplied data at that time.
+<span class="lineNum">     353 </span>            :   ///
+<span class="lineNum">     354 </span>            :   /// \note If this function is not able to interpolate to the full accuracy
+<span class="lineNum">     355 </span>            :   /// using a centered stencil, it will perform the best interpolation
+<span class="lineNum">     356 </span>            :   /// available.
+<span class="lineNum">     357 </span>            :   ///
+<span class="lineNum">     358 </span>            :   /// \warning This function will extrapolate if the target times are
+<span class="lineNum">     359 </span>            :   /// outside the range of data the class has been provided. This is intentional
+<span class="lineNum">     360 </span>            :   /// to support small extrapolation at the end of a simulation when no further
+<span class="lineNum">     361 </span>            :   /// data is available, but for full accuracy, check
+<span class="lineNum">     362 </span>            :   /// `first_time_is_ready_to_interpolate` before calling the interpolation
+<span class="lineNum">     363 </span>            :   /// functions
+<span class="lineNum">     364 </span><span class="lineCov">          1 :   std::pair&lt;double, VectorTypeToInterpolate&gt; interpolate_first_time() noexcept {</span>
+<span class="lineNum">     365 </span>            :     const auto lhs_interpolation =
+<span class="lineNum">     366 </span>            :         interpolation_manager_lhs_.interpolate_first_time();
+<span class="lineNum">     367 </span>            :     const auto rhs_interpolation =
+<span class="lineNum">     368 </span>            :         interpolation_manager_rhs_.interpolate_first_time();
+<span class="lineNum">     369 </span>            :     return std::make_pair(lhs_interpolation.first,
+<span class="lineNum">     370 </span>            :                           lhs_interpolation.second * rhs_interpolation.second);
+<span class="lineNum">     371 </span>            :   }
+<span class="lineNum">     372 </span>            : 
+<span class="lineNum">     373 </span>            :   /// \brief Interpolate to the first target time in the queue, returning both
+<span class="lineNum">     374 </span>            :   /// the time and the interpolated-and-multiplied data at that time, and remove
+<span class="lineNum">     375 </span>            :   /// the first time from the queue.
+<span class="lineNum">     376 </span>            :   ///
+<span class="lineNum">     377 </span>            :   /// \note If this function is not able to interpolate to the full accuracy
+<span class="lineNum">     378 </span>            :   /// using a centered stencil, it will perform the best interpolation
+<span class="lineNum">     379 </span>            :   /// available.
+<span class="lineNum">     380 </span>            :   ///
+<span class="lineNum">     381 </span>            :   /// \warning This function will extrapolate if the target times are
+<span class="lineNum">     382 </span>            :   /// outside the range of data the class has been provided. This is intentional
+<span class="lineNum">     383 </span>            :   /// to support small extrapolation at the end of a simulation when no further
+<span class="lineNum">     384 </span>            :   /// data is available, but for full accuracy, check
+<span class="lineNum">     385 </span>            :   /// `first_time_is_ready_to_interpolate` before calling the interpolation
+<span class="lineNum">     386 </span>            :   /// functions
+<span class="lineNum">     387 </span>            :   std::pair&lt;double, VectorTypeToInterpolate&gt;
+<span class="lineNum">     388 </span><span class="lineCov">          1 :   interpolate_and_pop_first_time() noexcept {</span>
+<span class="lineNum">     389 </span>            :     const auto lhs_interpolation =
+<span class="lineNum">     390 </span>            :         interpolation_manager_lhs_.interpolate_and_pop_first_time();
+<span class="lineNum">     391 </span>            :     const auto rhs_interpolation =
+<span class="lineNum">     392 </span>            :         interpolation_manager_rhs_.interpolate_and_pop_first_time();
+<span class="lineNum">     393 </span>            :     return std::make_pair(lhs_interpolation.first,
+<span class="lineNum">     394 </span>            :                           lhs_interpolation.second * rhs_interpolation.second);
+<span class="lineNum">     395 </span>            :   }
+<span class="lineNum">     396 </span>            : 
+<span class="lineNum">     397 </span>            :   /// \brief return the number of times in the target times queue
+<span class="lineNum">     398 </span><span class="lineCov">          1 :   size_t number_of_target_times() noexcept {</span>
+<span class="lineNum">     399 </span>            :     return interpolation_manager_lhs_.number_of_target_times();
+<span class="lineNum">     400 </span>            :   }
+<span class="lineNum">     401 </span>            : 
+<span class="lineNum">     402 </span>            :   /// \brief return the number of data points that have been provided to the
+<span class="lineNum">     403 </span>            :   /// interpolation manager
+<span class="lineNum">     404 </span><span class="lineCov">          1 :   size_t number_of_data_points() noexcept {</span>
+<span class="lineNum">     405 </span>            :     return interpolation_manager_lhs_.number_of_data_points();
+<span class="lineNum">     406 </span>            :   }
+<span class="lineNum">     407 </span>            : 
+<span class="lineNum">     408 </span>            :  private:
+<span class="lineNum">     409 </span>            :   /// \cond
+<span class="lineNum">     410 </span>            :   ScriPlusInterpolationManager&lt;VectorTypeToInterpolate, MultipliesLhs&gt;
+<span class="lineNum">     411 </span>            :       interpolation_manager_lhs_;
+<span class="lineNum">     412 </span>            :   ScriPlusInterpolationManager&lt;VectorTypeToInterpolate, MultipliesRhs&gt;
+<span class="lineNum">     413 </span>            :       interpolation_manager_rhs_;
+<span class="lineNum">     414 </span>            :   /// \endcond
+<span class="lineNum">     415 </span>            : };
+<span class="lineNum">     416 </span>            : 
+<span class="lineNum">     417 </span>            : /*!
+<span class="lineNum">     418 </span>            :  * \brief Stores necessary data and interpolates on to new time points at scri+,
+<span class="lineNum">     419 </span>            :  * differentiating before supplying the result.
+<span class="lineNum">     420 </span>            :  *
+<span class="lineNum">     421 </span>            :  * \details The coordinate time used for the CCE evolution is not the same as
+<span class="lineNum">     422 </span>            :  * the asymptotic inertial retarded time, which is determined through a separate
+<span class="lineNum">     423 </span>            :  * evolution equation. This class manages the scri+ data passed in
+<span class="lineNum">     424 </span>            :  * (via `insert_data()`) along with the set of inertial retarded times
+<span class="lineNum">     425 </span>            :  * associated with that data, and interpolates to a set of requested times
+<span class="lineNum">     426 </span>            :  * (supplied via `insert_target_time()`), differentiating the interpolation
+<span class="lineNum">     427 </span>            :  * before returning.
+<span class="lineNum">     428 </span>            :  *
+<span class="lineNum">     429 </span>            :  * Template parameters:
+<span class="lineNum">     430 </span>            :  * - `VectorTypeToInterpolate`: the vector type associated with the values to
+<span class="lineNum">     431 </span>            :  * interpolate.
+<span class="lineNum">     432 </span>            :  * - `Tags::Du&lt;Tag&gt;`: The tag associated with the interpolation procedure. This
+<span class="lineNum">     433 </span>            :  * determines the behavior of the interpolation return value. The default is
+<span class="lineNum">     434 </span>            :  * just interpolation, if `Tag` has prefix  `::Tags::Multiplies` or `Tags::Du`
+<span class="lineNum">     435 </span>            :  * (this case), the interpolator performs the additional multiplication or time
+<span class="lineNum">     436 </span>            :  * derivative as a step in the interpolation procedure.
+<span class="lineNum">     437 </span>            :  */
+<span class="lineNum">     438 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     439 </span><span class="lineCov">          1 : struct ScriPlusInterpolationManager&lt;VectorTypeToInterpolate, Tags::Du&lt;Tag&gt;&gt; {</span>
+<span class="lineNum">     440 </span>            :  public:
+<span class="lineNum">     441 </span><span class="lineNoCov">          0 :   ScriPlusInterpolationManager(</span>
+<span class="lineNum">     442 </span>            :       const size_t target_number_of_points, const size_t vector_size,
+<span class="lineNum">     443 </span>            :       std::unique_ptr&lt;intrp::SpanInterpolator&gt; interpolator) noexcept
+<span class="lineNum">     444 </span>            :       : argument_interpolation_manager_{target_number_of_points, vector_size,
+<span class="lineNum">     445 </span>            :                                         std::move(interpolator)} {}
+<span class="lineNum">     446 </span>            : 
+<span class="lineNum">     447 </span>            :   /// \brief provide data to the interpolation manager.
+<span class="lineNum">     448 </span>            :   ///
+<span class="lineNum">     449 </span>            :   /// \details `u_bondi` is a vector of
+<span class="lineNum">     450 </span>            :   /// inertial times, and `to_interpolate_argument` is the vector of values that
+<span class="lineNum">     451 </span>            :   /// will be interpolated to target times and differentiated.
+<span class="lineNum">     452 </span><span class="lineCov">          1 :   void insert_data(</span>
+<span class="lineNum">     453 </span>            :       const DataVector&amp; u_bondi,
+<span class="lineNum">     454 </span>            :       const VectorTypeToInterpolate&amp; to_interpolate_argument) noexcept {
+<span class="lineNum">     455 </span>            :     argument_interpolation_manager_.insert_data(u_bondi,
+<span class="lineNum">     456 </span>            :                                                 to_interpolate_argument);
+<span class="lineNum">     457 </span>            :   }
+<span class="lineNum">     458 </span>            : 
+<span class="lineNum">     459 </span>            :   /// \brief Request a target time to be interpolated to when enough data has
+<span class="lineNum">     460 </span>            :   /// been accumulated.
+<span class="lineNum">     461 </span>            :   ///
+<span class="lineNum">     462 </span>            :   /// For optimization, we assume that these are inserted in ascending order.
+<span class="lineNum">     463 </span><span class="lineCov">          1 :   void insert_target_time(const double time) noexcept {</span>
+<span class="lineNum">     464 </span>            :     argument_interpolation_manager_.insert_target_time(time);
+<span class="lineNum">     465 </span>            :   }
+<span class="lineNum">     466 </span>            : 
+<span class="lineNum">     467 </span>            :   /// \brief Determines whether enough data before and after the first time in
+<span class="lineNum">     468 </span>            :   /// the target time queue has been provided to interpolate.
+<span class="lineNum">     469 </span>            :   ///
+<span class="lineNum">     470 </span>            :   /// \details If possible, this function will require that the target time to
+<span class="lineNum">     471 </span>            :   /// be interpolated is reasonably centered on the range, but will settle for
+<span class="lineNum">     472 </span>            :   /// non-centered data if the time is too early for the given data, which is
+<span class="lineNum">     473 </span>            :   /// necessary to get the first couple of times out of the simulation. This
+<span class="lineNum">     474 </span>            :   /// function always returns false if all of the provided data is earlier than
+<span class="lineNum">     475 </span>            :   /// the next target time, indicating that the caller should wait until more
+<span class="lineNum">     476 </span>            :   /// data has been provided before interpolating.
+<span class="lineNum">     477 </span><span class="lineCov">          1 :   bool first_time_is_ready_to_interpolate() const noexcept {</span>
+<span class="lineNum">     478 </span>            :     return argument_interpolation_manager_.first_time_is_ready_to_interpolate();
+<span class="lineNum">     479 </span>            :   }
+<span class="lineNum">     480 </span>            : 
+<span class="lineNum">     481 </span>            :   /// \brief Interpolate to the first target time in the queue, returning both
+<span class="lineNum">     482 </span>            :   /// the time and the interpolated data at that time.
+<span class="lineNum">     483 </span>            :   ///
+<span class="lineNum">     484 </span>            :   /// \note If this function is not able to interpolate to the full accuracy
+<span class="lineNum">     485 </span>            :   /// using a centered stencil, it will perform the best interpolation
+<span class="lineNum">     486 </span>            :   /// available.
+<span class="lineNum">     487 </span>            :   ///
+<span class="lineNum">     488 </span>            :   /// \warning This function will extrapolate if the target times are
+<span class="lineNum">     489 </span>            :   /// outside the range of data the class has been provided. This is intentional
+<span class="lineNum">     490 </span>            :   /// to support small extrapolation at the end of a simulation when no further
+<span class="lineNum">     491 </span>            :   /// data is available, but for full accuracy, check
+<span class="lineNum">     492 </span>            :   /// `first_time_is_ready_to_interpolate` before calling the interpolation
+<span class="lineNum">     493 </span>            :   /// functions
+<span class="lineNum">     494 </span><span class="lineCov">          1 :   std::pair&lt;double, VectorTypeToInterpolate&gt; interpolate_first_time() noexcept;</span>
+<span class="lineNum">     495 </span>            : 
+<span class="lineNum">     496 </span>            :   /// \brief Interpolate to the first target time in the queue, returning both
+<span class="lineNum">     497 </span>            :   /// the time and the interpolated data at that time, and remove the first time
+<span class="lineNum">     498 </span>            :   /// from the queue.
+<span class="lineNum">     499 </span>            :   ///
+<span class="lineNum">     500 </span>            :   /// \note If this function is not able to interpolate to the full accuracy
+<span class="lineNum">     501 </span>            :   /// using a centered stencil, it will perform the best interpolation
+<span class="lineNum">     502 </span>            :   /// available.
+<span class="lineNum">     503 </span>            :   ///
+<span class="lineNum">     504 </span>            :   /// \warning This function will extrapolate if the target times are
+<span class="lineNum">     505 </span>            :   /// outside the range of data the class has been provided. This is intentional
+<span class="lineNum">     506 </span>            :   /// to support small extrapolation at the end of a simulation when no further
+<span class="lineNum">     507 </span>            :   /// data is available, but for full accuracy, check
+<span class="lineNum">     508 </span>            :   /// `first_time_is_ready_to_interpolate` before calling the interpolation
+<span class="lineNum">     509 </span>            :   /// functions
+<span class="lineNum">     510 </span>            :   std::pair&lt;double, VectorTypeToInterpolate&gt;
+<span class="lineNum">     511 </span><span class="lineCov">          1 :   interpolate_and_pop_first_time() noexcept;</span>
+<span class="lineNum">     512 </span>            : 
+<span class="lineNum">     513 </span>            :   /// \brief return the number of times in the target times queue
+<span class="lineNum">     514 </span><span class="lineCov">          1 :   size_t number_of_target_times() noexcept {</span>
+<span class="lineNum">     515 </span>            :     return argument_interpolation_manager_.number_of_target_times();
+<span class="lineNum">     516 </span>            :   }
+<span class="lineNum">     517 </span>            : 
+<span class="lineNum">     518 </span>            :   /// \brief return the number of data points that have been provided to the
+<span class="lineNum">     519 </span>            :   /// interpolation manager
+<span class="lineNum">     520 </span><span class="lineCov">          1 :   size_t number_of_data_points() noexcept {</span>
+<span class="lineNum">     521 </span>            :     return argument_interpolation_manager_.number_of_data_points();
+<span class="lineNum">     522 </span>            :   }
+<span class="lineNum">     523 </span>            : 
+<span class="lineNum">     524 </span>            :  private:
+<span class="lineNum">     525 </span>            :   // to avoid code duplication, most of the details are stored in an
+<span class="lineNum">     526 </span>            :   // interpolation manager for the argument tag, and this class is a friend of
+<span class="lineNum">     527 </span>            :   // the argument tag class
+<span class="lineNum">     528 </span>            :   /// \cond
+<span class="lineNum">     529 </span>            :   ScriPlusInterpolationManager&lt;VectorTypeToInterpolate, Tag&gt;
+<span class="lineNum">     530 </span>            :       argument_interpolation_manager_;
+<span class="lineNum">     531 </span>            :   /// \endcond
+<span class="lineNum">     532 </span>            : };
+<span class="lineNum">     533 </span>            : 
+<span class="lineNum">     534 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     535 </span>            : std::pair&lt;double, VectorTypeToInterpolate&gt; ScriPlusInterpolationManager&lt;
+<span class="lineNum">     536 </span>            :     VectorTypeToInterpolate, Tags::Du&lt;Tag&gt;&gt;::interpolate_first_time() noexcept {
+<span class="lineNum">     537 </span>            :   const size_t target_number_of_points =
+<span class="lineNum">     538 </span>            :       argument_interpolation_manager_.target_number_of_points_;
+<span class="lineNum">     539 </span>            :   if (argument_interpolation_manager_.target_times_.empty()) {
+<span class="lineNum">     540 </span>            :     ERROR(&quot;There are no target times to interpolate.&quot;);
+<span class="lineNum">     541 </span>            :   }
+<span class="lineNum">     542 </span>            :   if (argument_interpolation_manager_.to_interpolate_values_.size() &lt;
+<span class="lineNum">     543 </span>            :       2 * argument_interpolation_manager_.target_number_of_points_) {
+<span class="lineNum">     544 </span>            :     ERROR(&quot;Insufficient data points to continue interpolation: have &quot;
+<span class="lineNum">     545 </span>            :           &lt;&lt; argument_interpolation_manager_.to_interpolate_values_.size()
+<span class="lineNum">     546 </span>            :           &lt;&lt; &quot;, need at least&quot;
+<span class="lineNum">     547 </span>            :           &lt;&lt; 2 * argument_interpolation_manager_.target_number_of_points_);
+<span class="lineNum">     548 </span>            :   }
+<span class="lineNum">     549 </span>            :   // note that because we demand at least a certain number before and at least
+<span class="lineNum">     550 </span>            :   // a certain number after, we are likely to have a surfeit of points for the
+<span class="lineNum">     551 </span>            :   // interpolator, but this should not cause significant trouble for a
+<span class="lineNum">     552 </span>            :   // reasonable method.
+<span class="lineNum">     553 </span>            :   VectorTypeToInterpolate result{argument_interpolation_manager_.vector_size_};
+<span class="lineNum">     554 </span>            : 
+<span class="lineNum">     555 </span>            :   VectorTypeToInterpolate interpolation_values{2 * target_number_of_points};
+<span class="lineNum">     556 </span>            :   VectorTypeToInterpolate lobatto_collocation_values{2 *
+<span class="lineNum">     557 </span>            :                                                      target_number_of_points};
+<span class="lineNum">     558 </span>            :   VectorTypeToInterpolate derivative_lobatto_collocation_values{
+<span class="lineNum">     559 </span>            :       2 * target_number_of_points};
+<span class="lineNum">     560 </span>            :   DataVector interpolation_times{2 * target_number_of_points};
+<span class="lineNum">     561 </span>            :   DataVector collocation_points =
+<span class="lineNum">     562 </span>            :       Spectral::collocation_points&lt;Spectral::Basis::Legendre,
+<span class="lineNum">     563 </span>            :                                    Spectral::Quadrature::GaussLobatto&gt;(
+<span class="lineNum">     564 </span>            :           2 * target_number_of_points);
+<span class="lineNum">     565 </span>            : 
+<span class="lineNum">     566 </span>            :   const size_t interpolation_data_size =
+<span class="lineNum">     567 </span>            :       argument_interpolation_manager_.to_interpolate_values_.size();
+<span class="lineNum">     568 </span>            : 
+<span class="lineNum">     569 </span>            :   for (size_t i = 0; i &lt; argument_interpolation_manager_.vector_size_; ++i) {
+<span class="lineNum">     570 </span>            :     // binary search assumes times placed in sorted order
+<span class="lineNum">     571 </span>            :     auto upper_bound_offset = static_cast&lt;size_t&gt;(std::distance(
+<span class="lineNum">     572 </span>            :         argument_interpolation_manager_.u_bondi_values_.begin(),
+<span class="lineNum">     573 </span>            :         std::upper_bound(
+<span class="lineNum">     574 </span>            :             argument_interpolation_manager_.u_bondi_values_.begin(),
+<span class="lineNum">     575 </span>            :             argument_interpolation_manager_.u_bondi_values_.end(),
+<span class="lineNum">     576 </span>            :             argument_interpolation_manager_.target_times_.front(),
+<span class="lineNum">     577 </span>            :             [&amp;i](const double rhs, const DataVector&amp; lhs) noexcept {
+<span class="lineNum">     578 </span>            :               return rhs &lt; lhs[i];
+<span class="lineNum">     579 </span>            :             })));
+<span class="lineNum">     580 </span>            :     size_t lower_bound_offset =
+<span class="lineNum">     581 </span>            :         upper_bound_offset == 0 ? 0 : upper_bound_offset - 1;
+<span class="lineNum">     582 </span>            : 
+<span class="lineNum">     583 </span>            :     if (upper_bound_offset + target_number_of_points &gt;
+<span class="lineNum">     584 </span>            :         interpolation_data_size) {
+<span class="lineNum">     585 </span>            :       upper_bound_offset = interpolation_data_size;
+<span class="lineNum">     586 </span>            :       lower_bound_offset =
+<span class="lineNum">     587 </span>            :           interpolation_data_size - 2 * target_number_of_points;
+<span class="lineNum">     588 </span>            :     } else if (lower_bound_offset &lt; target_number_of_points - 1) {
+<span class="lineNum">     589 </span>            :       lower_bound_offset = 0;
+<span class="lineNum">     590 </span>            :       upper_bound_offset = 2 * target_number_of_points;
+<span class="lineNum">     591 </span>            :     } else {
+<span class="lineNum">     592 </span>            :       lower_bound_offset = lower_bound_offset + 1 - target_number_of_points;
+<span class="lineNum">     593 </span>            :       upper_bound_offset = lower_bound_offset + 2 * target_number_of_points;
+<span class="lineNum">     594 </span>            :     }
+<span class="lineNum">     595 </span>            :     auto interpolation_values_begin =
+<span class="lineNum">     596 </span>            :         argument_interpolation_manager_.to_interpolate_values_.begin() +
+<span class="lineNum">     597 </span>            :         static_cast&lt;ptrdiff_t&gt;(lower_bound_offset);
+<span class="lineNum">     598 </span>            :     auto interpolation_times_begin =
+<span class="lineNum">     599 </span>            :         argument_interpolation_manager_.u_bondi_values_.begin() +
+<span class="lineNum">     600 </span>            :         static_cast&lt;ptrdiff_t&gt;(lower_bound_offset);
+<span class="lineNum">     601 </span>            :     auto interpolation_times_end =
+<span class="lineNum">     602 </span>            :         argument_interpolation_manager_.u_bondi_values_.begin() +
+<span class="lineNum">     603 </span>            :         static_cast&lt;ptrdiff_t&gt;(upper_bound_offset);
+<span class="lineNum">     604 </span>            : 
+<span class="lineNum">     605 </span>            :     // interpolate using the data sets in the restricted iterators
+<span class="lineNum">     606 </span>            :     auto value_it = interpolation_values_begin;
+<span class="lineNum">     607 </span>            :     size_t vector_position = 0;
+<span class="lineNum">     608 </span>            :     for (auto time_it = interpolation_times_begin;
+<span class="lineNum">     609 </span>            :          time_it != interpolation_times_end;
+<span class="lineNum">     610 </span>            :          ++time_it, ++value_it, ++vector_position) {
+<span class="lineNum">     611 </span>            :       interpolation_values[vector_position] = (*value_it)[i];
+<span class="lineNum">     612 </span>            :       interpolation_times[vector_position] = (*time_it)[i];
+<span class="lineNum">     613 </span>            :     }
+<span class="lineNum">     614 </span>            :     for (size_t j = 0; j &lt; lobatto_collocation_values.size(); ++j) {
+<span class="lineNum">     615 </span>            :       lobatto_collocation_values[j] =
+<span class="lineNum">     616 </span>            :           argument_interpolation_manager_.interpolator_-&gt;interpolate(
+<span class="lineNum">     617 </span>            :               gsl::span&lt;const double&gt;(interpolation_times.data(),
+<span class="lineNum">     618 </span>            :                                       interpolation_times.size()),
+<span class="lineNum">     619 </span>            :               gsl::span&lt;const typename VectorTypeToInterpolate::value_type&gt;(
+<span class="lineNum">     620 </span>            :                   interpolation_values.data(), interpolation_values.size()),
+<span class="lineNum">     621 </span>            :               // affine transformation between the Gauss-Lobatto collocation
+<span class="lineNum">     622 </span>            :               // points and the physical times
+<span class="lineNum">     623 </span>            :               (collocation_points[j] + 1.0) * 0.5 *
+<span class="lineNum">     624 </span>            :                       (interpolation_times[interpolation_times.size() - 1] -
+<span class="lineNum">     625 </span>            :                        interpolation_times[0]) +
+<span class="lineNum">     626 </span>            :                   interpolation_times[0]);
+<span class="lineNum">     627 </span>            :     }
+<span class="lineNum">     628 </span>            :     // note the coordinate transformation to and from the Gauss-Lobatto basis
+<span class="lineNum">     629 </span>            :     // range [-1, 1]
+<span class="lineNum">     630 </span>            :     apply_matrices(
+<span class="lineNum">     631 </span>            :         make_not_null(&amp;derivative_lobatto_collocation_values),
+<span class="lineNum">     632 </span>            :         make_array&lt;1&gt;(
+<span class="lineNum">     633 </span>            :             Spectral::differentiation_matrix&lt;
+<span class="lineNum">     634 </span>            :                 Spectral::Basis::Legendre, Spectral::Quadrature::GaussLobatto&gt;(
+<span class="lineNum">     635 </span>            :                 lobatto_collocation_values.size())),
+<span class="lineNum">     636 </span>            :         lobatto_collocation_values,
+<span class="lineNum">     637 </span>            :         Index&lt;1&gt;(lobatto_collocation_values.size()));
+<span class="lineNum">     638 </span>            : 
+<span class="lineNum">     639 </span>            :     result[i] =
+<span class="lineNum">     640 </span>            :         argument_interpolation_manager_.interpolator_-&gt;interpolate(
+<span class="lineNum">     641 </span>            :             gsl::span&lt;const double&gt;(collocation_points.data(),
+<span class="lineNum">     642 </span>            :                                     collocation_points.size()),
+<span class="lineNum">     643 </span>            :             gsl::span&lt;const typename VectorTypeToInterpolate::value_type&gt;(
+<span class="lineNum">     644 </span>            :                 derivative_lobatto_collocation_values.data(),
+<span class="lineNum">     645 </span>            :                 derivative_lobatto_collocation_values.size()),
+<span class="lineNum">     646 </span>            :             2.0 *
+<span class="lineNum">     647 </span>            :                     (argument_interpolation_manager_.target_times_.front() -
+<span class="lineNum">     648 </span>            :                      interpolation_times[0]) /
+<span class="lineNum">     649 </span>            :                     (interpolation_times[interpolation_times.size() - 1] -
+<span class="lineNum">     650 </span>            :                      interpolation_times[0]) -
+<span class="lineNum">     651 </span>            :                 1.0) *
+<span class="lineNum">     652 </span>            :         2.0 /
+<span class="lineNum">     653 </span>            :         (interpolation_times[interpolation_times.size() - 1] -
+<span class="lineNum">     654 </span>            :          interpolation_times[0]);
+<span class="lineNum">     655 </span>            :   }
+<span class="lineNum">     656 </span>            :   return std::make_pair(argument_interpolation_manager_.target_times_.front(),
+<span class="lineNum">     657 </span>            :                         std::move(result));
+<span class="lineNum">     658 </span>            : }
+<span class="lineNum">     659 </span>            : 
+<span class="lineNum">     660 </span>            : template &lt;typename VectorTypeToInterpolate, typename Tag&gt;
+<span class="lineNum">     661 </span>            : std::pair&lt;double, VectorTypeToInterpolate&gt; ScriPlusInterpolationManager&lt;
+<span class="lineNum">     662 </span>            :     VectorTypeToInterpolate,
+<span class="lineNum">     663 </span>            :     Tags::Du&lt;Tag&gt;&gt;::interpolate_and_pop_first_time() noexcept {
+<span class="lineNum">     664 </span>            :   std::pair&lt;double, VectorTypeToInterpolate&gt; interpolated =
+<span class="lineNum">     665 </span>            :       interpolate_first_time();
+<span class="lineNum">     666 </span>            :   argument_interpolation_manager_.target_times_.pop_front();
+<span class="lineNum">     667 </span>            : 
+<span class="lineNum">     668 </span>            :   if (not argument_interpolation_manager_.target_times_.empty()) {
+<span class="lineNum">     669 </span>            :     argument_interpolation_manager_.remove_unneeded_early_times();
+<span class="lineNum">     670 </span>            :   }
+<span class="lineNum">     671 </span>            :   return interpolated;
+<span class="lineNum">     672 </span>            : }
+<span class="lineNum">     673 </span>            : }  // namespace Cce
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
